@@ -1948,6 +1948,32 @@ def tts():
     return Response(audio_bytes, mimetype='audio/mpeg')
 
 
+# ============================================================
+# ROTA TEMPORÁRIA — UPLOAD DO BANCO (remover após uso)
+# ============================================================
+@app.route('/admin/upload-banco', methods=['GET', 'POST'])
+def upload_banco():
+    TOKEN = 'vtm-upload-2026'
+    if request.method == 'GET':
+        return '''<!DOCTYPE html><html><body style="font-family:monospace;padding:40px;background:#111;color:#ccc;">
+        <h2 style="color:#8b0000;">Upload banco.db → /var/data/banco.db</h2>
+        <form method="POST" enctype="multipart/form-data">
+          <input type="password" name="token" placeholder="token" style="padding:8px;margin-bottom:10px;display:block;width:300px;"><br>
+          <input type="file" name="banco" accept=".db" style="margin-bottom:10px;display:block;"><br>
+          <button type="submit" style="background:#8b0000;color:white;padding:10px 20px;border:none;cursor:pointer;">Enviar</button>
+        </form></body></html>'''
+    token = request.form.get('token', '')
+    if token != TOKEN:
+        return 'Token inválido.', 403
+    arquivo = request.files.get('banco')
+    if not arquivo:
+        return 'Nenhum arquivo enviado.', 400
+    destino = '/var/data/banco.db'
+    arquivo.save(destino)
+    return f'<h2 style="color:green;font-family:monospace;padding:40px;">✓ banco.db salvo em {destino}<br><br>REMOVA ESTA ROTA DO CÓDIGO AGORA.</h2>'
+# ============================================================
+
+
 if __name__ == '__main__':
     debug = os.environ.get('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes')
     app.run(debug=debug, port=5001)
