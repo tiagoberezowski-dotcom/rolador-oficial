@@ -1968,9 +1968,13 @@ def upload_banco():
     arquivo = request.files.get('banco')
     if not arquivo:
         return 'Nenhum arquivo enviado.', 400
-    destino = '/var/data/banco.db'
-    arquivo.save(destino)
-    return f'<h2 style="color:green;font-family:monospace;padding:40px;">✓ banco.db salvo em {destino}<br><br>REMOVA ESTA ROTA DO CÓDIGO AGORA.</h2>'
+    try:
+        destino = '/var/data/banco.db'
+        os.makedirs('/var/data', exist_ok=True)
+        arquivo.save(destino)
+        return f'<h2 style="color:green;font-family:monospace;padding:40px;">✓ banco.db salvo em {destino}<br><br>REMOVA ESTA ROTA DO CÓDIGO AGORA.</h2>'
+    except Exception as e:
+        return f'<h2 style="color:red;font-family:monospace;padding:40px;">ERRO: {str(e)}</h2>'
 # ============================================================
 
 
