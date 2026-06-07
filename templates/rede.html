@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VTM Roller - Mapa da Teia de Sangue</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+    <!-- Importação da biblioteca de grafos -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        :root {
+            --ouro: #c9a96e;
+            --ouro-claro: #e0c594;
+            --sangue: #b3001b;
+            --sangue-hover: #ff1a3c;
+            --fome: #b3001b;
+            --bg: #0a0a0a;
+            --card: #111111;
+            --card-hover: #1a1a1a;
+            --borda: #3a3a3a;
+            --borda-ouro: #8a7340;
+            --texto: #cbb890;
+            --branco: #e0e0e0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--texto);
+            font-family: 'Crimson Text', serif;
+            min-height: 100vh;
+            padding: 20px 10px;
+        }
+
+        .header-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1000px;
+            margin: 0 auto 20px auto;
+        }
+
+        .btn-voltar {
+            background: transparent;
+            border: 1px solid var(--borda-ouro);
+            color: var(--ouro);
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+
+        .btn-voltar:hover {
+            background: #2a2511;
+            color: var(--ouro-claro);
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            color: var(--ouro);
+            text-align: center;
+            font-size: 2.2rem;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px rgba(201, 169, 110, 0.3);
+            flex-grow: 1;
+            margin: 0;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; }
+
+        .card-grafo {
+            background: var(--card);
+            border: 1px solid var(--borda-ouro);
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+            margin-bottom: 30px;
+        }
+
+        #network-graph {
+            width: 100%;
+            height: 600px;
+            background: #050505;
+            border-radius: 8px;
+            border: 1px solid #222;
+        }
+
+        /* Legenda */
+        .legenda {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+        }
+
+        .item-legenda { display: flex; align-items: center; gap: 8px; }
+        .cor-box { width: 14px; height: 14px; border-radius: 3px; border: 1px solid; }
+
+        .box-pc { background: #1a150d; border-color: var(--ouro); }
+        .box-corte { background: #111; border-color: #666; }
+        .box-aliado { background: #0a0a0a; border-color: #444; }
+        .box-inimigo { background: #1a0505; border-color: var(--sangue); }
+
+        /* Ajustes Mobile */
+        @media (max-width: 768px) {
+            .header-nav { flex-direction: column; gap: 15px; }
+            h1 { font-size: 1.6rem; }
+            #network-graph { height: 450px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-nav">
+        <a href="index.html" class="btn-voltar">⮜ VOLTAR À FICHA</a>
+        <h1>TEIA DE VARSÓVIA</h1>
+        <div style="width: 130px;"></div> <!-- Spacer para centralizar o título -->
+    </div>
+
+    <div class="container">
+        <div class="card-grafo">
+            <div id="network-graph"></div>
+
+            <div class="legenda">
+                <div class="item-legenda"><div class="cor-box box-pc"></div> Protagonistas</div>
+                <div class="item-legenda"><div class="cor-box box-corte"></div> A Corte</div>
+                <div class="item-legenda"><div class="cor-box box-aliado"></div> Aliados/Peões</div>
+                <div class="item-legenda"><div class="cor-box box-inimigo"></div> Antagonistas</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Definição visual dos grupos baseada nas variáveis de CSS
+        const visualGroups = {
+            pc: {
+                color: { background: '#1a150d', border: '#c9a96e', hover: { background: '#2a2511', border: '#e0c594' } },
+                font: { color: '#e0c594', face: 'Cinzel', bold: true },
+                shape: 'box',
+                borderWidth: 2
+            },
+            corte: {
+                color: { background: '#111111', border: '#666666', hover: { background: '#222222', border: '#888888' } },
+                font: { color: '#cbb890', face: 'Crimson Text' },
+                shape: 'ellipse',
+                borderWidth: 1
+            },
+            aliado: {
+                color: { background: '#0a0a0a', border: '#444444', hover: { background: '#1a1a1a', border: '#666666' } },
+                font: { color: '#aaaaaa', face: 'Crimson Text' },
+                shape: 'ellipse',
+                borderWidth: 1
+            },
+            inimigo: {
+                color: { background: '#1a0505', border: '#b3001b', hover: { background: '#2a0505', border: '#ff1a3c' } },
+                font: { color: '#ffb0b0', face: 'Crimson Text' },
+                shape: 'box',
+                borderWidth: 2
+            }
+        };
+
+        // Criação dos Nós (Personagens e Entidades)
+        var nodes = new vis.DataSet([
+            // Protagonistas
+            {id: 'Lior', label: 'Lior Kovalenko\n(Malkavian)', group: 'pc', title: 'Inteligência & Infiltração. Pilar: Daniel Singer'},
+            {id: 'Fryderyk', label: 'Fryderyk Rozynski\n(Toreador)', group: 'pc', title: 'Intelectual Político. Pilar: Marek Zielinski'},
+
+            // Antagonistas
+            {id: 'Elijahu', label: 'Elijahu Rosenlicht\n(O Compositor)', group: 'inimigo', title: 'Senhor de Fryderyk. Quer recriar o Mashiach.'},
+            {id: 'Fundacja', label: 'Fundacja Korzenie\n(A Fôrma)', group: 'inimigo', title: 'Fachada em Cracóvia industrializando a composição.'},
+            {id: 'Dabrowski', label: 'Equipe Dabrowski\n(Van em Wola)', group: 'inimigo', title: 'Recolhedores caçando Awrum. Ordem: capturar inteiro.'},
+
+            // Corte de Varsóvia
+            {id: 'Principe', label: 'Príncipe Morsztyn\n(Ventrue)', group: 'corte'},
+            {id: 'Renata', label: 'Senescal Renata\n(Lasombra)', group: 'corte'},
+            {id: 'Celestyna', label: 'Harpia Celestyna\n(Toreador)', group: 'corte'},
+            {id: 'Symon', label: 'Arauto Symon\n(Ventrue)', group: 'corte'},
+            {id: 'Borys', label: 'Xerife Borys\n(Gangrel)', group: 'corte'},
+
+            // Passado / PDM's Relacionados
+            {id: 'Oliver', label: 'Oliver Steinberg\n(Senhor de Lior)', group: 'aliado'},
+            {id: 'Awrum', label: 'Awrum\n(Tipógrafo/Alvo)', group: 'aliado'},
+            {id: 'Marek', label: 'Marek Zielinski\n(Ghoul de Fryderyk)', group: 'aliado'},
+            {id: 'Igor', label: 'Igor\n(Retainer de Lior)', group: 'aliado'},
+            {id: 'Bohdan', label: 'Bohdan\n(Contato Praga)', group: 'aliado'}
+        ]);
+
+        // Criação das Arestas (Relações Dramáticas)
+        var edges = new vis.DataSet([
+            // Relações centrais
+            {from: 'Lior', to: 'Fryderyk', label: 'Aliados Sombra/Voz\n(Assimetria de Info)', dashes: true, color: {color: '#8a7340'}},
+
+            // O Passado e a Origem
+            {from: 'Oliver', to: 'Lior', label: 'Abraço / Amnésia', arrows: 'to', color: {color: '#555'}},
+            {from: 'Elijahu', to: 'Fryderyk', label: 'Abraço / Busca a Centelha', arrows: 'to', color: {color: '#b3001b'}, width: 2},
+            {from: 'Elijahu', to: 'Oliver', label: '"Uma das mãos" na Lwów 41-44', arrows: 'to', color: {color: '#b3001b'}},
+
+            // O Acionador (Awrum e Marek)
+            {from: 'Awrum', to: 'Lior', label: 'Cruzou o continente (Culpa)', arrows: 'to', color: {color: '#c9a96e'}},
+            {from: 'Awrum', to: 'Elijahu', label: 'Entregou nomes p/ viver', arrows: 'to', dashes: true},
+            {from: 'Marek', to: 'Fryderyk', label: 'Salvou e esconde a Partitura', arrows: 'to'},
+
+            // Dinâmicas da Corte
+            {from: 'Principe', to: 'Lior', label: 'Incumbência/Instrumentaliza', arrows: 'to'},
+            {from: 'Principe', to: 'Fryderyk', label: 'Incumbência/Instrumentaliza', arrows: 'to'},
+            {from: 'Renata', to: 'Lior', label: 'Anzol ("Mãos discretas")', arrows: 'to, from', dashes: true},
+            {from: 'Celestyna', to: 'Fryderyk', label: 'Deal: "Sabe Primeiro"', arrows: 'to, from'},
+
+            // A Trama / Investigação
+            {from: 'Bohdan', to: 'Renata', label: 'Suspeita de desaparecimentos', arrows: 'to', dashes: true},
+            {from: 'Celestyna', to: 'Renata', label: 'Aponta sem nomear', arrows: 'to', dashes: true},
+            {from: 'Lior', to: 'Fundacja', label: 'Hack (Varredura e Catálogo)', arrows: 'to'},
+            {from: 'Elijahu', to: 'Fundacja', label: 'Mestre / Fôrma Industrial', arrows: 'to'},
+            {from: 'Fundacja', to: 'Dabrowski', label: 'Coordena (Transporte Lua Nova)', arrows: 'to'},
+            {from: 'Dabrowski', to: 'Awrum', label: 'Caçando Ativamente', arrows: 'to', color: {color: '#b3001b'}}
+        ]);
+
+        var container = document.getElementById('network-graph');
+        var data = { nodes: nodes, edges: edges };
+
+        // Configuração de Física e UX do Vis.js
+        var options = {
+            nodes: {
+                margin: 10,
+                shadow: { enabled: true, color: 'rgba(0,0,0,0.8)', size: 10 }
+            },
+            edges: {
+                font: { color: '#888', size: 11, face: 'Crimson Text', background: '#050505', strokeWidth: 0 },
+                color: { color: '#444', highlight: '#c9a96e' },
+                smooth: { type: 'dynamic' }
+            },
+            groups: visualGroups,
+            physics: {
+                forceAtlas2Based: {
+                    gravitationalConstant: -120,
+                    centralGravity: 0.01,
+                    springLength: 200,
+                    springConstant: 0.08
+                },
+                maxVelocity: 50,
+                solver: 'forceAtlas2Based',
+                timestep: 0.35,
+                stabilization: { iterations: 150 }
+            },
+            interaction: {
+                hover: true,
+                tooltipDelay: 200,
+                zoomView: true
+            }
+        };
+
+        // Renderiza
+        var network = new vis.Network(container, data, options);
+    </script>
+</body>
+</html>

@@ -1,0 +1,3117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VTM Roller - Ficha Viva</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ouro: #c9a96e;
+            --ouro-claro: #e0c594;
+            --sangue: #b3001b;
+            --sangue-hover: #ff1a3c;
+            --fome: #b3001b;
+            --bg: #0a0a0a;
+            --card: #111111;
+            --card-hover: #1a1a1a;
+            --borda: #3a3a3a;
+            --borda-ouro: #8a7340;
+            --texto: #cbb890;
+            --branco: #e0e0e0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--texto);
+            font-family: 'Crimson Text', serif;
+            min-height: 100vh;
+            padding: 20px 10px;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            color: var(--ouro);
+            text-align: center;
+            font-size: 2.4rem;
+            letter-spacing: 4px;
+            margin-bottom: 6px;
+            text-shadow: 0 0 10px rgba(201, 169, 110, 0.3);
+        }
+
+        .subtitulo { text-align: center; color: #666; font-size: 0.85rem; margin-bottom: 24px; letter-spacing: 1px; }
+
+        /* ----- Avatar do Personagem ----- */
+        .avatar-container {
+            display: flex; justify-content: center; gap: 40px; margin-bottom: 30px;
+        }
+        .avatar-circle {
+            width: 140px; height: 140px; border-radius: 50%;
+            border: 3px solid var(--ouro);
+            background: #000;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(201, 169, 110, 0.4);
+            position: relative;
+        }
+        .avatar-circle img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .avatar-placeholder {
+            width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+            color: #666; font-family: 'Cinzel', serif; font-size: 0.8rem; text-align: center; padding: 10px;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; }
+
+        /* ----- Medidor de Fome do Topo ----- */
+        .fome-tracker {
+            display: flex; align-items: center; justify-content: center; gap: 20px;
+            background: #160507; border: 1px solid var(--borda-ouro);
+            border-radius: 8px; padding: 16px; margin-bottom: 30px;
+        }
+        .fome-label { font-family: 'Cinzel', serif; font-size: 1.2rem; letter-spacing: 2px; color: var(--fome); font-weight: bold;}
+        .gotas { display: flex; gap: 12px; align-items: center; }
+        .gota-fome { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+        .gota-fome i {
+            width: 18px; height: 18px; display: block; border-radius: 50% 50% 50% 0; transform: rotate(45deg);
+            border: 2px solid #8a3333; background: transparent; transition: 0.2s;
+        }
+        .gota-fome.cheia i { background: var(--fome); border-color: var(--fome); box-shadow: 0 0 8px rgba(179, 0, 27, 0.6); }
+        .gota-fome:hover i { border-color: var(--sangue-hover); }
+
+        /* ----- Ficha Viva Grid ----- */
+        .sheet-section { margin-bottom: 30px; }
+        .section-header {
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 15px; color: var(--ouro); font-family: 'Cinzel', serif; font-size: 1.1rem; letter-spacing: 4px;
+        }
+        .section-header::before, .section-header::after {
+            content: ""; flex: 1; border-bottom: 1px solid var(--ouro); margin: 0 15px; opacity: 0.3;
+        }
+
+        .sheet-columns { display: flex; gap: 15px; }
+        .sheet-col { flex: 1; background: #0d0d0d; border: 1px solid var(--borda-ouro); border-radius: 6px; padding: 12px; }
+
+        @media (max-width: 768px) {
+            .sheet-columns { flex-direction: column; gap: 20px; }
+            .info-row { flex-direction: column; }
+            .btns-acao { flex-wrap: wrap; }
+            .btn { font-size: 0.85rem !important; padding: 10px !important; }
+        }
+
+        .col-title {
+            font-family: 'Cinzel', serif; color: #888; font-size: 0.8rem; letter-spacing: 2px;
+            margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 6px;
+        }
+
+        .stat-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 8px; border-radius: 4px; border: 1px solid transparent;
+            margin-bottom: 2px; transition: 0.3s; cursor: pointer;
+        }
+        .stat-row:hover { border-color: var(--borda-ouro); background: #1a1a15; }
+
+        .stat-row.selected { background: #2a2511; border-color: var(--ouro); }
+        .stat-row.selected .stat-name { color: var(--ouro-claro); font-weight: bold; }
+
+        .stat-name {
+            font-family: 'Cinzel', serif; font-size: 0.85rem; color: #aaa; flex: 1; user-select: none; transition: 0.2s;
+        }
+        .stat-name:hover { color: var(--branco); }
+
+        .spec-btn {
+            width: 18px; height: 18px; border-radius: 50%; border: 1px solid #3a3a3a;
+            color: #3a3a3a; font-size: 0.7rem; display: inline-flex; align-items: center;
+            justify-content: center; cursor: pointer; transition: 0.2s; user-select: none;
+            flex-shrink: 0; margin-right: 6px;
+        }
+        .spec-btn.ativa { border-color: var(--ouro); color: var(--ouro); background: rgba(201, 169, 110, 0.12); box-shadow: 0 0 4px rgba(201, 169, 110, 0.3); }
+
+        .stat-dots { display: flex; gap: 4px; align-items: center; }
+        .dot {
+            width: 13px; height: 13px; border-radius: 50%; border: 1px solid var(--borda-ouro);
+            background: #111; cursor: pointer; transition: 0.15s;
+        }
+        .dot.fill { background: var(--ouro); border-color: var(--ouro); box-shadow: 0 0 5px rgba(201, 169, 110, 0.4); }
+        .dot:hover { border-color: var(--ouro-claro); }
+
+        /* ----- Controles de Ação Fixos ----- */
+        .action-panel {
+            position: sticky; bottom: 10px; z-index: 100;
+            background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(5px);
+            border: 1px solid var(--ouro); border-radius: 10px; padding: 20px;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
+        }
+
+        .info-row { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; }
+        .info-row input, .info-row select {
+            background: #000; border: 1px solid var(--borda-ouro); color: var(--ouro);
+            border-radius: 5px; padding: 12px; font-family: 'Cinzel', serif; font-size: 1rem; width: 100%;
+        }
+        .info-row input:focus, .info-row select:focus { outline: none; border-color: var(--ouro-claro); }
+        .info-row select { appearance: none; text-align: center; cursor: pointer; }
+
+        .label-pequena { display: block; font-family: 'Cinzel', serif; font-size: 0.7rem; color: #888; margin-bottom: 4px; text-align: center;}
+
+        .btns-acao { display: flex; gap: 8px; }
+        .btn {
+            padding: 12px; border: none; border-radius: 5px;
+            font-family: 'Cinzel', serif; font-size: 0.9rem; letter-spacing: 1px;
+            cursor: pointer; transition: 0.2s; font-weight: bold; flex: 1;
+        }
+        .btn:disabled { opacity: .45; cursor: not-allowed; }
+        .btn-primario { background: var(--sangue); color: #fff; flex: 1.2; }
+        .btn-primario:hover:not(:disabled) { background: var(--sangue-hover); }
+
+        .btn-poder { background: transparent; border: 2px solid var(--ouro); color: var(--ouro); flex: 1.2; transition: 0.3s; }
+        .btn-poder:hover:not(:disabled) { background: #2a2511; color: #fff; border-color: var(--ouro-claro); }
+        .btn-poder.ativo {
+            background: var(--ouro); color: #000;
+            box-shadow: 0 0 15px rgba(201, 169, 110, 0.6);
+            border-color: var(--ouro-claro);
+        }
+
+        .btn-surge { background: transparent; border: 2px solid var(--sangue); color: var(--sangue); flex: 1.2; transition: 0.3s; }
+        .btn-surge:hover:not(:disabled) { background: #3a0000; color: #fff; border-color: var(--sangue-hover); }
+        .btn-surge.ativo {
+            background: var(--sangue); color: #fff;
+            box-shadow: 0 0 15px rgba(179, 0, 27, 0.8);
+            border-color: var(--sangue-hover);
+            text-shadow: 0 0 5px rgba(255,255,255,0.5);
+        }
+
+        .btn-secundario { background: transparent; border: 1px solid var(--borda-ouro); color: var(--ouro); }
+        .btn-secundario:hover:not(:disabled) { background: #2a2511; }
+        .btn-clear { background: transparent; border: 1px solid #555; color: #888; font-size: 0.8rem; flex: 0.8;}
+        .btn-clear:hover { background: #222; color: #fff; }
+
+        /* ----- Resultado ----- */
+        .resultado-card { border: 1px solid var(--borda-ouro); border-radius: 10px; padding: 20px; margin: 20px 0; background: var(--card); transition: 0.3s; }
+        .mood-neutro   { border-color: var(--borda-ouro); }
+        .mood-sucesso  { border-color: var(--ouro); }
+        .mood-crit     { border-color: var(--ouro-claro); box-shadow: 0 0 15px rgba(201, 169, 110, 0.2); }
+        .mood-messy    { border-color: var(--fome); box-shadow: 0 0 15px rgba(179, 0, 27, 0.3); }
+        .mood-bestial  { border-color: #ff3030; box-shadow: 0 0 15px rgba(255, 48, 48, 0.3); }
+        .mood-falha    { border-color: #555; }
+
+        .resultado-topo { text-align: center; font-family: 'Cinzel', serif; letter-spacing: 2px; font-size: 0.95rem; margin-bottom: 4px; }
+        .resultado-num { text-align: center; font-family: 'Cinzel', serif; font-weight: 700; font-size: 3.6rem; line-height: 1.05; }
+        .resultado-sub { text-align: center; margin-bottom: 14px; }
+        .sub-suc { font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 3px; color: #b89a78; display: block; }
+        .sub-desc { font-style: italic; font-size: 0.95rem; color: #9a8468; display: block; margin-top: 3px; }
+        .rouse-extra { text-align: center; font-size: 0.9rem; margin-top: 10px; }
+
+        .mood-sucesso .resultado-num, .mood-crit .resultado-num { color: var(--ouro); }
+        .mood-messy .resultado-num   { color: #e8c074; }
+        .mood-bestial .resultado-num { color: #ff5a5a; }
+        .mood-falha .resultado-num   { color: #888; }
+        .mood-sucesso .resultado-topo { color: var(--ouro); }
+        .mood-crit .resultado-topo    { color: var(--ouro-claro); }
+        .mood-messy .resultado-topo   { color: #e0a23c; }
+        .mood-bestial .resultado-topo { color: #ff5a5a; }
+        .mood-falha .resultado-topo   { color: #9a9a9a; }
+
+        /* ----- Dados 3D Layout ----- */
+        .area-dados { display: flex; flex-wrap: wrap; gap: 11px; justify-content: center; margin-top: 18px; }
+        .dado { width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; font-size: 1.3rem; font-weight: 600; user-select: none; }
+        .dado-normal { background: #191919; border: 2px solid #444; color: #7d7d7d; }
+        .dado-normal.is-sucesso { background: #1c1510; border-color: var(--ouro); color: #e8d3a3; }
+        .dado-normal.is-crit { background: #241a10; border-color: var(--ouro-claro); color: #f3deac; }
+        .dado-normal.is-rerolavel { border-style: dashed; border-color: var(--borda-ouro); cursor: pointer; }
+        .dado-normal.is-selecionado { border-style: solid; border-color: var(--ouro); background: #4a3b22; color: #f3deac; transform: translateY(-4px); }
+        .dado-fome { background: #320707; border: 2px solid #7a0d0d; color: #d89a9a; position: relative;}
+        .dado-fome.is-sucesso { background: #460a0a; border-color: var(--fome); color: #f0c98a; }
+        .dado-fome.is-crit { background: #4a0a0a; border-color: #cf2b2b; color: #f3d29a; }
+        .dado-fome.is-bestial { background: #2a0606; border-color: #ff3a3a; color: #ffb0b0; }
+        .dado-fome::after { content: ''; position: absolute; bottom: -5px; right: -3px; width: 9px; height: 9px; background: var(--fome); border-radius: 50% 50% 50% 0; transform: rotate(45deg); }
+
+        .btn-wp { width: 100%; background: transparent; border: 1px solid var(--ouro); color: var(--ouro-claro); margin-top: 15px; padding: 12px; border-radius: 5px; cursor: pointer; font-family: 'Cinzel', serif;}
+        .btn-wp:hover { background: #241a10; }
+
+        /* ----- Botão Confirmar Ação ----- */
+        .btn-confirmar {
+            width: 100%;
+            background: var(--sangue);
+            border: none;
+            color: #fff;
+            margin-top: 14px;
+            padding: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            font-size: 0.95rem;
+            letter-spacing: 2px;
+            transition: 0.2s;
+            box-shadow: 0 0 12px rgba(179, 0, 27, 0.3);
+        }
+        .btn-confirmar:hover:not(:disabled) {
+            background: var(--sangue-hover);
+            box-shadow: 0 0 20px rgba(179, 0, 27, 0.5);
+        }
+        .btn-confirmar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-cancelar-acao {
+            width: 100%;
+            background: transparent;
+            border: 1px solid #444;
+            color: #777;
+            margin-top: 8px;
+            padding: 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            transition: 0.2s;
+        }
+        .btn-cancelar-acao:hover { background: #1a1a1a; color: #aaa; border-color: #666; }
+
+        /* ----- Disciplines Expandíveis ----- */
+        .disc-wrap { margin-bottom: 5px; }
+
+        .disc-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 10px; border-radius: 4px; border: 1px solid var(--borda-ouro);
+            cursor: pointer; transition: 0.25s; background: #0d0d0d; user-select: none;
+        }
+        .disc-header:hover { background: #1a1a15; border-color: var(--ouro); }
+        .disc-header.expandido {
+            background: #161208; border-color: var(--ouro);
+            border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+        }
+        .disc-nome {
+            font-family: 'Cinzel', serif; font-size: 0.85rem; color: #aaa; flex: 1; transition: 0.2s;
+        }
+        .disc-header:hover .disc-nome, .disc-header.expandido .disc-nome { color: var(--ouro-claro); }
+        .disc-toggle {
+            font-size: 0.6rem; color: #555; transition: transform 0.25s, color 0.25s;
+        }
+        .disc-header.expandido .disc-toggle { transform: rotate(90deg); color: var(--ouro); }
+
+        .disc-poderes {
+            display: none; background: #06060a;
+            border: 1px solid var(--ouro); border-top: none;
+            border-radius: 0 0 4px 4px; padding: 2px 0;
+        }
+        .disc-poderes.aberto { display: block; }
+
+        .poder-row {
+            display: flex; align-items: center; padding: 4px 10px;
+            border-bottom: 1px solid #0f0f0f; gap: 6px; transition: background 0.15s;
+        }
+        .poder-row:last-child { border-bottom: none; }
+        .poder-row.tem-formula:not(.bloqueado) { cursor: pointer; }
+        .poder-row.tem-formula:not(.bloqueado):hover { background: #130f06; }
+        .poder-row.bloqueado { opacity: 0.25; pointer-events: none; }
+
+        .poder-nome {
+            font-family: 'Crimson Text', serif; font-size: 0.88rem; color: #aaa; flex: 1;
+        }
+        .poder-row.tem-formula:not(.bloqueado):hover .poder-nome { color: var(--ouro-claro); }
+
+        .poder-custo {
+            font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.5px;
+            padding: 1px 5px; border-radius: 6px; flex-shrink: 0; white-space: nowrap;
+        }
+        .custo-gratis { color: #888; border: 1px solid #3a3a3a; padding: 1px 5px; border-radius: 6px; }
+        .custo-rouse  { color: #e07070; border: 1px solid var(--sangue); padding: 1px 5px; border-radius: 6px; background: rgba(179,0,27,0.12); }
+        .custo-rouse2 { color: #ff9090; border: 1px solid #cc2020; padding: 1px 5px; border-radius: 6px; background: rgba(179,0,27,0.22); }
+
+        .poder-btn-rolar {
+            width: 20px; height: 20px; border-radius: 3px; flex-shrink: 0;
+            background: transparent; border: 1px solid #333; color: #666;
+            font-size: 0.6rem; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .poder-btn-rolar:hover { background: var(--ouro); color: #000; border-color: var(--ouro); }
+
+        .poder-row.poder-ativo {
+            background: #1a1408;
+            border-left: 2px solid var(--ouro);
+            padding-left: 8px;
+        }
+        .poder-row.poder-ativo .poder-nome { color: var(--ouro-claro); }
+        .poder-row.poder-ativo .poder-btn-rolar { background: var(--ouro); color: #000; border-color: var(--ouro); }
+
+        .aviso-acao-pendente {
+            display: block;
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: rgba(179, 0, 27, 0.08);
+            border-left: 2px solid var(--sangue);
+            color: #c89090;
+            font-family: 'Crimson Text', serif;
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        /* ----- Configurações de Personagem ----- */
+        .config-personagem {
+            background: #0d0d0d;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 20px;
+        }
+        .config-titulo {
+            font-family: 'Cinzel', serif;
+            color: #666;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .config-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .config-row input {
+            flex: 1;
+            background: #000;
+            border: 1px solid #2a2a2a;
+            color: #999;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-family: 'Crimson Text', serif;
+            font-size: 0.8rem;
+        }
+        .config-row input:focus {
+            outline: none;
+            border-color: var(--borda-ouro);
+            color: #ccc;
+        }
+        .ajuda { font-size: 0.82rem; color: #7a6a55; font-style: italic; margin-top: 8px; text-align: center; display: block; }
+
+        /* ----- Histórico ----- */
+        .hist-card { border: 1px solid var(--borda-ouro); background: #0d0d0d; border-radius: 10px; padding: 20px; margin-bottom: 25px; }
+        .hist-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+        .hist-header h2 { font-family: 'Cinzel', serif; color: var(--ouro); font-size: 1.15rem; letter-spacing: 3px; margin: 0;}
+        .historico-texto { font-family: 'Crimson Text', serif; font-size: 1.05rem; color: #cfc2ac; line-height: 1.6;}
+        .hist-item { background: #161616; padding: 12px; border-radius: 6px; margin-bottom: 12px; border-left: 3px solid var(--borda-ouro); }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .cursor-streaming { display: inline-block; width: 2px; height: 1em; background: var(--sangue); animation: blink 0.7s step-end infinite; vertical-align: text-bottom; margin-left: 1px; }
+
+        /* Indicador de presença */
+        .presenca-bar {
+            display: flex; gap: 14px; align-items: center; justify-content: flex-end;
+            padding: 6px 14px; font-family: 'Cinzel', serif; font-size: 0.72rem;
+            letter-spacing: 1.5px; color: #555;
+        }
+        .presenca-item { display: flex; align-items: center; gap: 6px; }
+        .presenca-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #333; transition: 0.3s;
+        }
+        .presenca-dot.online { background: #4ade80; box-shadow: 0 0 6px rgba(74, 222, 128, 0.6); }
+        .presenca-dot.typing { background: var(--ouro); box-shadow: 0 0 6px rgba(201, 169, 110, 0.7); animation: blink 1s step-end infinite; }
+        .presenca-item.online { color: #aaa; }
+        .presenca-item.typing { color: var(--ouro-claro); font-style: italic; }
+
+        /* ----- Rastreador de Recursos ----- */
+        .recursos-panel {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+            background: #0d0d0d; border: 1px solid var(--borda-ouro); border-radius: 8px;
+            padding: 12px; margin-bottom: 20px;
+        }
+        .recurso-item {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            padding: 8px; background: #1a1a1a; border-radius: 6px; border: 1px solid #2a2a2a;
+        }
+        .recurso-label { font-family: 'Cinzel', serif; font-size: 0.7rem; color: #999; letter-spacing: 1px; }
+        .recurso-valor {
+            font-family: 'Cinzel', serif; font-size: 1.4rem; font-weight: bold; color: var(--ouro);
+            cursor: pointer; transition: 0.2s;
+        }
+        .recurso-valor:hover { color: var(--ouro-claro); }
+        .recurso-buttons { display: flex; gap: 4px; }
+        .btn-recurso { width: 24px; height: 24px; padding: 0; font-size: 0.7rem; border: 1px solid #3a3a3a; background: #111; color: #666; cursor: pointer; border-radius: 3px; transition: 0.2s; }
+        .btn-recurso:hover { background: #2a2a2a; color: var(--ouro); border-color: var(--ouro); }
+
+        /* ----- Painel de Notas ----- */
+        .notas-panel {
+            background: #0d0d0d; border: 1px solid var(--borda-ouro); border-radius: 8px;
+            padding: 12px; margin-bottom: 20px; max-height: 300px; overflow-y: auto;
+        }
+        .notas-header { font-family: 'Cinzel', serif; color: var(--ouro); font-size: 0.9rem; letter-spacing: 2px; margin-bottom: 10px; }
+        .nota-item {
+            background: #1a1a1a; border-left: 2px solid var(--ouro); padding: 8px; margin-bottom: 8px;
+            border-radius: 4px; font-size: 0.85rem; color: #ccc; position: relative;
+        }
+        .nota-item .btn-deletar { position: absolute; right: 4px; top: 4px; width: 16px; height: 16px; padding: 0; font-size: 0.6rem; opacity: 0.5; }
+        .nota-item .btn-deletar:hover { opacity: 1; color: var(--sangue); }
+        .nota-input { width: 100%; background: #111; border: 1px solid #3a3a3a; color: var(--ouro); padding: 6px; border-radius: 4px; font-family: 'Crimson Text', serif; font-size: 0.85rem; margin-bottom: 6px; }
+        .nota-input:focus { outline: none; border-color: var(--ouro); }
+        .btn-nota-add { width: 100%; padding: 6px; background: var(--sangue); border: none; color: #fff; border-radius: 4px; cursor: pointer; font-family: 'Cinzel', serif; font-size: 0.75rem; transition: 0.2s; }
+        .btn-nota-add:hover { background: var(--sangue-hover); }
+
+        /* ----- Chat Input Melhorado ----- */
+        .chat-input-wrapper {
+            position: relative; display: flex; gap: 8px; align-items: flex-end;
+            border: 1px solid var(--borda-ouro); border-radius: 8px;
+            background: #000; padding: 8px 12px; transition: 0.2s;
+            focus-within: border-color var(--ouro);
+            box-shadow: 0 0 0 0 rgba(201, 169, 110, 0);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .chat-input-wrapper:focus-within {
+            border-color: var(--ouro); box-shadow: 0 0 0 2px rgba(201, 169, 110, 0.15);
+        }
+
+        #chat-input {
+            flex: 1; background: transparent; border: none; color: var(--ouro);
+            font-family: 'Crimson Text', serif; font-size: 1.05rem; line-height: 1.5;
+            resize: none; max-height: 150px; outline: none;
+            padding: 0; min-height: 40px;
+        }
+        #chat-input::placeholder { color: #666; }
+
+        .chat-input-container {
+            display: flex; gap: 8px; flex-direction: column; margin-bottom: 15px;
+        }
+
+        .chat-input-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-top: 6px; font-family: 'Cinzel', serif; font-size: 0.7rem;
+        }
+        #contador-chars {
+            color: #555; transition: color 0.2s;
+        }
+        #contador-chars.warning { color: var(--ouro); }
+        #contador-chars.danger { color: var(--sangue); }
+
+        .chat-submit-btn {
+            width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+            background: var(--sangue); border: none; border-radius: 6px; cursor: pointer;
+            color: #fff; font-size: 0.9rem; transition: 0.2s; flex-shrink: 0;
+            font-family: 'Cinzel', serif;
+        }
+        .chat-submit-btn:hover { background: var(--sangue-hover); transform: scale(1.05); }
+        .chat-submit-btn:active { transform: scale(0.95); }
+        .chat-submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: scale(1); }
+
+        /* Botão de novas mensagens flutuante */
+        .chat-scroll-btn {
+            position: absolute; bottom: 20px; right: 20px; z-index: 50;
+            background: var(--sangue); color: #fff; border: none;
+            border-radius: 50%; width: 48px; height: 48px;
+            display: none; align-items: center; justify-content: center;
+            cursor: pointer; font-family: 'Cinzel', serif; font-size: 0.7rem;
+            box-shadow: 0 4px 12px rgba(179, 0, 27, 0.4);
+            transition: 0.3s; animation: slideUp 0.3s ease-out;
+        }
+        .chat-scroll-btn.visible { display: flex; }
+        .chat-scroll-btn:hover { background: var(--sangue-hover); transform: scale(1.1); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Indicador de digitação do mestre */
+        .mestre-typing {
+            display: flex; gap: 4px; align-items: center; padding: 12px 14px;
+            background: #2a1515; border-radius: 6px; border-left: 4px solid var(--sangue);
+            color: var(--sangue); font-family: 'Cinzel', serif; font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+        .typing-dot { width: 6px; height: 6px; background: var(--sangue); border-radius: 50%; animation: pulse 1.4s infinite; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes pulse { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
+
+        /* Indicador de aguardando outros jogadores */
+        .aguardando-turno {
+            display: flex; flex-direction: column; gap: 8px; padding: 12px 14px;
+            background: #2a2015; border-radius: 6px; border-left: 4px solid var(--ouro);
+            color: var(--ouro); font-family: 'Cinzel', serif; font-size: 0.8rem;
+            letter-spacing: 2px;
+        }
+        .aguardando-turno::before { content: '─ ─ ─'; display: block; margin-bottom: 6px; color: #5a4a35; font-size: 0.7rem; letter-spacing: 2px; }
+        .aguardando-turno strong { display: block; margin-bottom: 6px; font-size: 0.85rem; }
+        .aguardando-lista { font-size: 0.75rem; color: #d4b47c; }
+        .aguardando-lista span { display: inline-block; margin-right: 10px; padding: 2px 0; }
+        .aguardando-lista span::before { content: '■ '; color: #8a6a40; }
+        .aguardando-lista span.respondido::before { content: '■ '; color: var(--ouro); }
+        .btn-prosseguir {
+            margin-top: 12px; width: 100%; padding: 10px; background: transparent;
+            border: 1px solid var(--sangue); color: var(--sangue-hover); border-radius: 5px;
+            cursor: pointer; font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 2px;
+            transition: 0.2s; animation: slideUp 0.3s ease-out;
+        }
+        .btn-prosseguir:hover { background: #3a0000; color: #fff; }
+
+        /* ----- Modal Encerrar Sessão ----- */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+            z-index: 200; align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-overlay.ativo { display: flex; }
+        .modal-box {
+            background: #111; border: 1px solid var(--ouro); border-radius: 10px;
+            padding: 24px; width: 100%; max-width: 720px; max-height: 90vh;
+            display: flex; flex-direction: column; gap: 16px;
+        }
+        .modal-titulo {
+            font-family: 'Cinzel', serif; color: var(--ouro);
+            font-size: 1.1rem; letter-spacing: 3px; text-align: center;
+        }
+        .modal-textarea {
+            flex: 1; min-height: 360px; background: #000; border: 1px solid var(--borda-ouro);
+            color: #e0e0e0; font-family: 'Times New Roman', Times, serif;
+            font-size: 15px; line-height: 1.6; padding: 14px; border-radius: 6px;
+            resize: vertical;
+        }
+        .modal-textarea:focus { outline: none; border-color: var(--ouro); }
+        .modal-btns { display: flex; gap: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+            <a href="/logout" style="font-family:'Cinzel',serif; font-size:0.75rem; color:#555; letter-spacing:2px; text-decoration:none; border:1px solid #333; padding:5px 12px; border-radius:4px; transition:0.2s;" onmouseover="this.style.color='var(--ouro)'" onmouseout="this.style.color='#555'">SAIR</a>
+        </div>
+        <h1>VTM 5</h1>
+        <p class="subtitulo">Vampire: The Masquerade 5ª Edição</p>
+
+        <!-- Avatares dos Personagens -->
+        <div class="avatar-container">
+            <div style="text-align: center;">
+                <label for="avatar-file-input" style="cursor: pointer; display: block;">
+                    <div class="avatar-circle" id="avatar-visual" title="Clique para enviar uma imagem">
+                        <div class="avatar-placeholder">Clique para enviar</div>
+                    </div>
+                </label>
+                <input type="file" id="avatar-file-input" style="display: none;" accept="image/*" onchange="processarUploadAvatar(event)">
+                <div style="margin-top: 8px; font-family: 'Cinzel', serif; color: #999; font-size: 0.75rem; letter-spacing: 1px;">{{ jogador | upper }}</div>
+            </div>
+        </div>
+
+        <div class="fome-tracker">
+            <span class="fome-label">HUNGER</span>
+            <div class="gotas" id="gotas"></div>
+            <span class="fome-valor" id="fome-valor-txt">0 / 5</span>
+        </div>
+
+        <div id="ficha-container"></div>
+
+        <div class="resultado-card mood-neutro" id="resultado-card" style="display: none;">
+            <div id="resultado-conteudo">
+                <div class="resultado-topo" id="resultado-topo"></div>
+                <div class="resultado-num" id="resultado-num"></div>
+                <div class="resultado-sub" id="resultado-sub"></div>
+                <div class="area-dados" id="area-dados"></div>
+                <div class="rouse-extra" id="rouse-extra"></div>
+            </div>
+            <span class="ajuda" id="dica-reroll" style="display:none;">Toque em até 3 dados normais de falha para gastar 1 Força de Vontade.</span>
+            <button class="btn-wp" id="btn-reroll" style="display:none;" onclick="gastarWillpower()"></button>
+            <button class="btn-confirmar" id="btn-confirmar" style="display:none;" onclick="confirmarAcao()">☥ CONFIRMAR AÇÃO E ENVIAR AO MESTRE</button>
+            <button class="btn-cancelar-acao" id="btn-cancelar-acao" style="display:none;" onclick="cancelarAcao()">CANCELAR AÇÃO</button>
+            <span class="aviso-acao-pendente" id="aviso-acao-pendente" style="display:none;">Descreva a ação no campo do chat abaixo, ou confirme para ser perguntado.</span>
+        </div>
+
+        <div class="hist-card">
+            <div class="hist-header">
+                <h2>HISTÓRICO DA MESA</h2>
+                <button class="btn-clear" id="btn-copiar" style="display:none; flex:0; padding: 6px 12px; margin-left:15px; border-color:var(--ouro); color:var(--ouro);" onclick="copiarUltimaJogada()">COPIAR ÚLTIMA</button>
+            </div>
+            <div id="historico-texto" class="historico-texto">Nenhuma rolagem ainda.</div>
+        </div>
+
+<!-- CHAT DO RPG -->
+        <!-- Modal Encerrar Sessão -->
+        <!-- Modal Input Genérico -->
+        <div class="modal-overlay" id="modal-input-generico">
+            <div class="modal-box" style="max-width: 420px; gap: 14px;">
+                <div class="modal-titulo" id="modal-input-titulo" style="letter-spacing:4px; font-size:0.95rem;"></div>
+                <p id="modal-input-desc" style="font-family:'Crimson Text',serif; color:#888; font-size:0.9rem; font-style:italic; text-align:center; margin:0;"></p>
+                <input id="modal-input-campo"
+                    style="background:#000; border:1px solid var(--borda-ouro); color:var(--ouro-claro);
+                           font-family:'Crimson Text',serif; font-size:1rem; padding:12px 14px;
+                           border-radius:5px; width:100%; box-sizing:border-box; outline:none;"
+                    onfocus="this.style.borderColor='var(--ouro)'"
+                    onblur="this.style.borderColor='var(--borda-ouro)'"
+                    onkeydown="if(event.key==='Enter') confirmarModalInput(); if(event.key==='Escape') cancelarModalInput();">
+                <div class="modal-btns">
+                    <button class="btn btn-primario" onclick="confirmarModalInput()">CONFIRMAR</button>
+                    <button class="btn btn-secundario" onclick="cancelarModalInput()">CANCELAR</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Descrição de Ação -->
+        <div class="modal-overlay" id="modal-descricao">
+            <div class="modal-box" style="max-width: 460px; gap: 14px;">
+                <div class="modal-titulo" style="letter-spacing:4px; font-size:0.95rem;">DESCREVA A AÇÃO</div>
+                <p style="font-family:'Crimson Text',serif; color:#888; font-size:0.9rem; font-style:italic; text-align:center; margin:0;">
+                    O que seu personagem faz neste momento?
+                </p>
+                <input type="text" id="modal-descricao-input"
+                    style="background:#000; border:1px solid var(--borda-ouro); color:var(--ouro-claro);
+                           font-family:'Crimson Text',serif; font-size:1rem; padding:12px 14px;
+                           border-radius:5px; width:100%; box-sizing:border-box; outline:none;"
+                    placeholder="Ex: Lior activa o Unseen Passage e desliza pela sala..."
+                    onfocus="this.style.borderColor='var(--ouro)'"
+                    onblur="this.style.borderColor='var(--borda-ouro)'"
+                    onkeydown="if(event.key==='Enter') confirmarDescricaoModal(); if(event.key==='Escape') cancelarDescricaoModal();">
+                <div class="modal-btns">
+                    <button class="btn btn-primario" onclick="confirmarDescricaoModal()">CONFIRMAR</button>
+                    <button class="btn btn-secundario" onclick="cancelarDescricaoModal()">CANCELAR</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="modal-sessao">
+            <div class="modal-box">
+                <div class="modal-titulo">ENCERRAMENTO DE SESSÃO</div>
+                <div id="modal-status" style="text-align:center; color:#888; font-family:'Cinzel',serif; font-size:0.85rem; display:none;">
+                    O Mestre está compilando os eventos da noite...
+                </div>
+                <textarea class="modal-textarea" id="modal-resumo-texto" placeholder="O resumo aparecerá aqui. Você pode editar antes de salvar."></textarea>
+                <div class="modal-btns">
+                    <button class="btn btn-primario" onclick="salvarResumoCanon()" id="btn-salvar-canon" disabled>SALVAR NO CÂNONE</button>
+                    <button class="btn btn-secundario" onclick="fecharModalSessao()">CANCELAR</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Painel de Recursos -->
+        <div class="recursos-panel">
+            <div class="recurso-item">
+                <span class="recurso-label">WILLPOWER</span>
+                <span class="recurso-valor" id="wp-valor" onclick="abrirEditarRecurso('willpower')">5</span>
+                <div class="recurso-buttons">
+                    <button class="btn-recurso" onclick="alterarRecurso('willpower', -1)">−</button>
+                    <button class="btn-recurso" onclick="alterarRecurso('willpower', 1)">+</button>
+                </div>
+            </div>
+            <div class="recurso-item">
+                <span class="recurso-label">HEALTH</span>
+                <span class="recurso-valor" id="health-valor" onclick="abrirEditarRecurso('health')">3</span>
+                <div class="recurso-buttons">
+                    <button class="btn-recurso" onclick="alterarRecurso('health', -1)">−</button>
+                    <button class="btn-recurso" onclick="alterarRecurso('health', 1)">+</button>
+                </div>
+            </div>
+            <div class="recurso-item">
+                <span class="recurso-label">HUMANITY</span>
+                <span class="recurso-valor" id="humanity-valor" onclick="abrirEditarRecurso('humanity')">7</span>
+                <div class="recurso-buttons">
+                    <button class="btn-recurso" onclick="alterarRecurso('humanity', -1)">−</button>
+                    <button class="btn-recurso" onclick="alterarRecurso('humanity', 1)">+</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Painel de Notas -->
+        <div class="notas-panel">
+            <div class="notas-header">NOTAS PRIVADAS</div>
+            <input type="text" class="nota-input" id="nota-input" placeholder="Digite uma nota e pressione Enter ou clique +">
+            <button class="btn-nota-add" onclick="adicionarNota()">+ ADICIONAR NOTA</button>
+            <div id="notas-lista"></div>
+        </div>
+
+        
+
+
+        <div class="hist-card" style="margin-bottom: 25px;">
+            <div class="hist-header">
+                <h2>MESA VIRTUAL (CHAT)</h2>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-secundario" style="flex:0; padding:6px 14px; font-size:0.8rem;" onclick="abrirModalSessao()">ENCERRAR SESSÃO</button>
+                </div>
+            </div>
+            <div class="presenca-bar" id="presenca-bar"></div>
+            <div id="chat-mensagens" style="height: 400px; overflow-y: auto; background: #111; padding: 15px; border-radius: 6px; border: 1px solid var(--borda-ouro); margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; position: relative;">
+                <!-- As mensagens vão aparecer aqui -->
+            </div>
+            <button class="chat-scroll-btn" id="chat-scroll-btn" onclick="scrollParaBaixoChat()">♱ NOVAS</button>
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <textarea id="chat-input" maxlength="1190" placeholder="Conte o que acontece..." style="margin: 0;"></textarea>
+                    <button class="chat-submit-btn" id="chat-submit-btn" onclick="enviarMensagemChat()" title="Enviar (Enter)">†</button>
+                </div>
+                <div class="chat-input-footer">
+                    <span id="dica-input" style="color: #666; font-size: 0.7rem;">Shift + Enter = nova linha</span>
+                    <span id="contador-chars">0/1190</span>
+                </div>
+            </div>
+        </div>
+            
+        <div class="action-panel">
+            <div class="info-row">
+                <div style="flex: 2.5;">
+                    <span class="label-pequena" style="text-align: left;">PERSONAGEM</span>
+                    <input type="hidden" id="jogador" value="{{ jogador }}">
+                    <div style="font-family:'Cinzel',serif; font-size:1rem; color:var(--ouro); padding:12px; background:#000; border:1px solid var(--borda-ouro); border-radius:5px; text-align:center; letter-spacing:3px;">{{ jogador | upper }}</div>
+                </div>
+                <div style="flex: 1;">
+                    <span class="label-pequena">BLOOD POTENCY</span>
+                    <select id="blood-potency" onchange="salvarBP(); atualizarCaixaSoma();">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <span class="label-pequena">DADOS (SOMA)</span>
+                    <input type="number" id="num-dados" min="1" max="20" inputmode="numeric" placeholder="0">
+                </div>
+            </div>
+            <div class="btns-acao">
+                <button class="btn btn-clear" onclick="limparSelecao()">LIMPAR</button>
+                <button class="btn btn-poder" id="btn-poder" onclick="togglePoder()">USAR PODER</button>
+                <button class="btn btn-surge" id="btn-surge" onclick="toggleSurge()">BLOOD SURGE</button>
+                <button class="btn btn-primario" id="btn-rolar" onclick="executarRolagem()">ROLAR</button>
+                <button class="btn btn-secundario" id="btn-rouse" onclick="rouseCheck()">ROUSE</button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="som-dados" src="https://actions.google.com/sounds/v1/foley/rolling_dice.ogg" preload="auto"></audio>
+
+    <script>
+        let fichaViva = JSON.parse(localStorage.getItem('vtm_ficha_viva')) || {};
+        let especialidades = JSON.parse(localStorage.getItem('vtm_especialidades')) || {};
+        let acaoAtual = [];
+        let fomeAtual = parseInt(localStorage.getItem('fome') || '0', 10);
+        let selecionadosReroll = [];
+        let estadoRolagem = { normais: [], fome: [] };
+        let rolando = false;
+
+        let surgeAtivo = false;
+        let poderAtivo = false;
+        let nomePoderAtivado = "";
+        let disciplinasExpandidas = new Set();
+        let poderRowAtivo = null; // referência ao último poder-row ativado
+
+        let acaoPendente = null; // Ação aguardando confirmação para ir ao Mestre
+
+        let currentAvatarUrl = localStorage.getItem('vtm_avatar_url') || '';
+
+        let ultimoHashHistorico = "";
+
+        // Lista de Disciplinas diretas
+        const disciplinasV5 = ["Celerity", "Fortitude", "Potence", "Blood Sorcery", "Auspex", "Dominate", "Obfuscate", "Oblivion", "Animalism", "Presence", "Protean", "Thin-Blood Alchemy"];
+
+        // Dicionário Oculto de Regras (Combinações Indiretas conhecidas)
+        const dicionarioPoderes = {
+            "RESOLVE,WITS": "Auspex (Ex: Sentidos Aguçados / Sentir o Invisível)",
+            "ANIMAL KEN,CHARISMA": "Animalism (Ex: Laço de Famulus)",
+            "ANIMAL KEN,MANIPULATION": "Animalism (Ex: Sussurros Ferais)",
+            "STEALTH,WITS": "Obfuscate (Ex: Manto das Sombras / Passagem Invisível)",
+            "BRAWL,STRENGTH": "Potence / Fera (Combate Sobrenatural)",
+            "ATHLETICS,STRENGTH": "Potence (Ex: Salto Pantagruélico)",
+            "INTELLIGENCE,OCCULT": "Blood Sorcery / Oblivion (Rituais / Cerimónias)",
+            "OCCULT,RESOLVE": "Oblivion",
+            "CHARISMA,INTIMIDATION": "Presence (Amedrontar / Fascínio)",
+            "CHARISMA,LEADERSHIP": "Presence / Dominate",
+            "MANIPULATION,SUBTERFUGE": "Obfuscate / Presence",
+            "INSIGHT,WITS": "Auspex",
+            "MANIPULATION,PERSUASION": "Dominate / Presence"
+        };
+
+        const poderesDisciplinas = {
+            "Animalism": [
+                { nome: "Bond Famulus",        nivel: 1, custo: "gratuito", formula: { attr: "Charisma",      disc: "Animal Ken" } },
+                { nome: "Sense the Beast",     nivel: 1, custo: "gratuito", formula: { attr: "Resolve",      disc: "Animalism" } },
+                { nome: "Feral Whispers",      nivel: 2, custo: "1 Rouse",  formula: { attr: "Charisma",      disc: "Animalism" } },
+                { nome: "Quell the Beast",     nivel: 2, custo: "1 Rouse",  formula: { attr: "Charisma",      disc: "Animalism" } },
+                { nome: "Animal Succulence",   nivel: 3, custo: "gratuito", formula: null },
+                { nome: "Plague of Beasts",    nivel: 3, custo: "1 Rouse",  formula: { attr: "Manipulation",  disc: "Animalism" } },
+                { nome: "Subsume the Spirit",  nivel: 4, custo: "1 Rouse",  formula: { attr: "Manipulation",  disc: "Animalism" } },
+                { nome: "Animal Dominion",     nivel: 5, custo: "2 Rouse",  formula: { attr: "Charisma",      disc: "Animalism" } },
+                { nome: "Drawing Out the Beast", nivel: 5, custo: "1 Rouse", formula: { attr: "Wits",         disc: "Animalism" } },
+            ],
+            "Auspex": [
+                { nome: "Heightened Senses",   nivel: 1, custo: "gratuito", formula: { attr: "Wits",         disc: "Resolve" } },
+                { nome: "Sense the Unseen",    nivel: 1, custo: "gratuito", formula: { attr: "Resolve",       disc: "Auspex" } },
+                { nome: "Premonition",         nivel: 2, custo: "gratuito", formula: { attr: "Resolve",       disc: "Auspex" } },
+                { nome: "Reveal Temperament",  nivel: 2, custo: "1 Rouse",  formula: { attr: "Intelligence",  disc: "Auspex" } },
+                { nome: "Scry the Soul",       nivel: 3, custo: "1 Rouse",  formula: { attr: "Intelligence",  disc: "Auspex" } },
+                { nome: "Share the Senses",    nivel: 3, custo: "1 Rouse",  formula: { attr: "Resolve",       disc: "Auspex" } },
+                { nome: "Spirit's Touch",      nivel: 4, custo: "1 Rouse",  formula: { attr: "Intelligence",  disc: "Auspex" } },
+                { nome: "Heart Laid Bare",     nivel: 4, custo: "1 Rouse",  formula: { attr: "Intelligence",  disc: "Auspex" } },
+                { nome: "Telepathy",           nivel: 5, custo: "1 Rouse",  formula: { attr: "Resolve",       disc: "Auspex" } },
+                { nome: "Possession",          nivel: 5, custo: "2 Rouse",  formula: { attr: "Resolve",       disc: "Auspex" } },
+            ],
+            "Blood Sorcery": [
+                { nome: "A Taste for Blood",   nivel: 1, custo: "gratuito", formula: { attr: "Resolve",       disc: "Blood Sorcery" } },
+                { nome: "Corrosive Vitae",     nivel: 1, custo: "1 Rouse",  formula: null },
+                { nome: "Extinguish Vitae",    nivel: 2, custo: "1 Rouse",  formula: { attr: "Intelligence",  disc: "Blood Sorcery" } },
+                { nome: "Blood of Potency",    nivel: 3, custo: "1 Rouse",  formula: { attr: "Resolve",       disc: "Blood Sorcery" } },
+                { nome: "Scorpion's Touch",    nivel: 3, custo: "1 Rouse",  formula: { attr: "Strength",      disc: "Blood Sorcery" } },
+                { nome: "Theft of Vitae",      nivel: 4, custo: "1 Rouse",  formula: { attr: "Wits",          disc: "Blood Sorcery" } },
+                { nome: "Marionette",          nivel: 4, custo: "1 Rouse",  formula: { attr: "Manipulation",  disc: "Blood Sorcery" } },
+                { nome: "Cauldron of Blood",   nivel: 5, custo: "2 Rouse",  formula: { attr: "Resolve",       disc: "Blood Sorcery" } },
+            ],
+            "Celerity": [
+                { nome: "Rapid Reflexes",      nivel: 1, custo: "gratuito", formula: null },
+                { nome: "Fleetness",           nivel: 2, custo: "1 Rouse",  formula: { attr: "Dexterity",     disc: "Celerity" } },
+                { nome: "Blink",               nivel: 3, custo: "1 Rouse",  formula: { attr: "Dexterity",     disc: "Athletics" } },
+                { nome: "Traversal",           nivel: 3, custo: "1 Rouse",  formula: { attr: "Dexterity",     disc: "Athletics" } },
+                { nome: "Blurred Momentum",    nivel: 4, custo: "1 Rouse",  formula: null },
+                { nome: "Lightning Strike",    nivel: 5, custo: "1 Rouse",  formula: { attr: "Dexterity",     disc: "Celerity" } },
+            ],
+            "Dominate": [
+                { nome: "Compel",              nivel: 1, custo: "gratuito", formula: { attr: "Charisma",      disc: "Dominate" } },
+                { nome: "Cloud Memory",        nivel: 1, custo: "gratuito", formula: { attr: "Charisma",      disc: "Dominate" } },
+                { nome: "Mesmerize",           nivel: 2, custo: "1 Rouse",  formula: { attr: "Manipulation",  disc: "Dominate" } },
+                { nome: "Dementation",         nivel: 2, custo: "1 Rouse",  formula: { attr: "Manipulation",  disc: "Dominate" } },
+                { nome: "Forgetful Mind",      nivel: 3, custo: "1 Rouse",  formula: { attr: "Manipulation",  disc: "Dominate" } },
+                { nome: "Implant Suggestion",  nivel: 4, custo: "1 Rouse",  formula: { attr: "Manipulation",  disc: "Dominate" } },
+                { nome: "Tabula Rasa",         nivel: 4, custo: "2 Rouse",  formula: { attr: "Resolve",       disc: "Dominate" } },
+                { nome: "Mass Manipulation",   nivel: 5, custo: "1 Rouse",  formula: null },
+                { nome: "Lethe's Call",        nivel: 5, custo: "1 Rouse",  formula: { attr: "Manipulation",  disc: "Dominate" } },
+            ],
+            "Fortitude": [
+                { nome: "Resilience",          nivel: 1, custo: "gratuito", formula: null },
+                { nome: "Unswayable Mind",     nivel: 1, custo: "gratuito", formula: null },
+                { nome: "Toughness",           nivel: 2, custo: "1 Rouse",  formula: null },
+                { nome: "Obdurate",            nivel: 2, custo: "1 Rouse",  formula: { attr: "Wits",          disc: "Survival" } },
+                { nome: "Defy Bane",           nivel: 3, custo: "1 Rouse",  formula: { attr: "Wits",          disc: "Survival" } },
+                { nome: "Fortify the Inner Façade", nivel: 3, custo: "gratuito", formula: null },
+                { nome: "Draught of Endurance",nivel: 4, custo: "1 Rouse",  formula: null },
+                { nome: "Flesh of Marble",     nivel: 5, custo: "2 Rouse",  formula: null },
+            ],
+            "Obfuscate": [
+                { nome: "Cloak of Shadows",    nivel: 1, custo: "gratuito", formula: null },
+                { nome: "Silence of Death",    nivel: 1, custo: "gratuito", formula: null },
+                { nome: "Unseen Passage",      nivel: 2, custo: "1 Rouse",  formula: { attr: "Wits",          disc: "Obfuscate" } },
+                { nome: "Chimestry",           nivel: 2, custo: "1 Rouse",  formula: { attr: "Manipulation",  disc: "Obfuscate" } },
+                { nome: "Ghost in the Machine",nivel: 3, custo: "gratuito", formula: null },
+                { nome: "Mask of a Thousand Faces", nivel: 3, custo: "1 Rouse", formula: { attr: "Wits",      disc: "Obfuscate" } },
+                { nome: "Vanish",              nivel: 4, custo: "1 Rouse",  formula: { attr: "Wits",          disc: "Obfuscate" } },
+                { nome: "Conceal",             nivel: 4, custo: "1 Rouse",  formula: { attr: "Intelligence",  disc: "Obfuscate" } },
+                { nome: "Cloak the Gathering", nivel: 5, custo: "1 Rouse",  formula: { attr: "Wits",          disc: "Obfuscate" } },
+            ],
+            "Oblivion": [
+                { nome: "Oblivion Sight",      nivel: 1, custo: "gratuito", formula: null },
+                { nome: "Shadow Cloak",        nivel: 1, custo: "gratuito", formula: null },
+                { nome: "Shadow Cast",         nivel: 2, custo: "1 Rouse",  formula: { attr: "Wits",          disc: "Oblivion" } },
+                { nome: "Arms of Ahriman",     nivel: 2, custo: "1 Rouse",  formula: { attr: "Wits",          disc: "Oblivion" } },
+                { nome: "Touch of Oblivion",   nivel: 3, custo: "1 Rouse",  formula: { attr: "Strength",      disc: "Oblivion" } },
+                { nome: "Aura of Decay",       nivel: 3, custo: "1 Rouse",  formula: { attr: "Stamina",       disc: "Oblivion" } },
+                { nome: "Stygian Shroud",      nivel: 4, custo: "1 Rouse",  formula: null },
+                { nome: "Necrotic Plague",     nivel: 4, custo: "1 Rouse",  formula: { attr: "Intelligence",  disc: "Oblivion" } },
+                { nome: "Shadow Step",         nivel: 5, custo: "1 Rouse",  formula: { attr: "Wits",          disc: "Oblivion" } },
+                { nome: "Tenebrous Avatar",    nivel: 5, custo: "2 Rouse",  formula: null },
+            ],
+            "Potence": [
+                { nome: "Lethal Body",         nivel: 1, custo: "gratuito", formula: null },
+                { nome: "Soaring Leap",        nivel: 1, custo: "gratuito", formula: null },
+                { nome: "Prowess",             nivel: 2, custo: "1 Rouse",  formula: { attr: "Strength",      disc: "Potence" } },
+                { nome: "Relentless Grasp",    nivel: 2, custo: "1 Rouse",  formula: { attr: "Strength",      disc: "Potence" } },
+                { nome: "Spark of Rage",       nivel: 3, custo: "1 Rouse",  formula: { attr: "Strength",      disc: "Potence" } },
+                { nome: "Crash Down",          nivel: 4, custo: "1 Rouse",  formula: { attr: "Strength",      disc: "Potence" } },
+                { nome: "Fist of Caine",       nivel: 5, custo: "1 Rouse",  formula: null },
+                { nome: "Earth Shock",         nivel: 5, custo: "2 Rouse",  formula: { attr: "Strength",      disc: "Potence" } },
+            ],
+            "Presence": [
+                { nome: "Awe",                 nivel: 1, custo: "gratuito", formula: null },
+                { nome: "Daunt",               nivel: 1, custo: "gratuito", formula: null },
+                { nome: "Eyes of the Serpent", nivel: 1, custo: "gratuito", formula: { attr: "Charisma",      disc: "Presence" } },
+                { nome: "Lingering Kiss",      nivel: 2, custo: "gratuito", formula: null },
+                { nome: "Dread Gaze",          nivel: 3, custo: "1 Rouse",  formula: { attr: "Charisma",      disc: "Presence" } },
+                { nome: "Entrancement",        nivel: 3, custo: "1 Rouse",  formula: { attr: "Charisma",      disc: "Presence" } },
+                { nome: "Summon",              nivel: 4, custo: "1 Rouse",  formula: { attr: "Manipulation",  disc: "Presence" } },
+                { nome: "Majesty",             nivel: 5, custo: "2 Rouse",  formula: { attr: "Charisma",      disc: "Presence" } },
+            ],
+            "Protean": [
+                { nome: "Eyes of the Beast",   nivel: 1, custo: "gratuito", formula: null },
+                { nome: "Weight of the Feather",nivel:1, custo: "gratuito", formula: null },
+                { nome: "Feral Weapons",       nivel: 2, custo: "1 Rouse",  formula: { attr: "Strength",      disc: "Protean" } },
+                { nome: "Earth Meld",          nivel: 3, custo: "1 Rouse",  formula: null },
+                { nome: "Shapechange",         nivel: 3, custo: "1 Rouse",  formula: { attr: "Manipulation",  disc: "Protean" } },
+                { nome: "Horrid Form",         nivel: 4, custo: "1 Rouse",  formula: null },
+                { nome: "Mist Form",           nivel: 5, custo: "1 Rouse",  formula: null },
+                { nome: "Blood Form",          nivel: 5, custo: "1 Rouse",  formula: null },
+            ],
+        };
+
+        const schemaFicha = [
+            {
+                titulo: "ATTRIBUTES",
+                colunas: [
+                    { nome: "PHYSICAL", itens: ["Strength", "Dexterity", "Stamina"] },
+                    { nome: "SOCIAL", itens: ["Charisma", "Manipulation", "Composure"] },
+                    { nome: "MENTAL", itens: ["Intelligence", "Wits", "Resolve"] }
+                ]
+            },
+            {
+                titulo: "SKILLS",
+                colunas: [
+                    { nome: "PHYSICAL", itens: ["Athletics", "Brawl", "Craft", "Drive", "Firearms", "Larceny", "Melee", "Stealth", "Survival"] },
+                    { nome: "SOCIAL", itens: ["Animal Ken", "Etiquette", "Insight", "Intimidation", "Leadership", "Performance", "Persuasion", "Streetwise", "Subterfuge"] },
+                    { nome: "MENTAL", itens: ["Academics", "Awareness", "Finance", "Investigation", "Medicine", "Occult", "Politics", "Science", "Technology"] }
+                ]
+            },
+            {
+                titulo: "DISCIPLINES",
+                colunas: [
+                    { nome: "PHYSICAL / BLOOD", itens: ["Celerity", "Fortitude", "Potence", "Blood Sorcery"] },
+                    { nome: "MENTAL / OBSCURE", itens: ["Auspex", "Dominate", "Obfuscate", "Oblivion"] },
+                    { nome: "SOCIAL / NATURE", itens: ["Animalism", "Presence", "Protean"] }
+                ]
+            }
+        ];
+
+        /* ---------- DESENHADOR DA FICHA ---------- */
+        function inicializarFicha() {
+            const container = document.getElementById('ficha-container');
+            container.innerHTML = '';
+
+            schemaFicha.forEach(secao => {
+                const secDiv = document.createElement('div');
+                secDiv.className = 'sheet-section';
+
+                const secHeader = document.createElement('div');
+                secHeader.className = 'section-header';
+                secHeader.textContent = secao.titulo;
+                secDiv.appendChild(secHeader);
+
+                const colContainer = document.createElement('div');
+                colContainer.className = 'sheet-columns';
+
+                const ehSkill = secao.titulo === 'SKILLS';
+                const ehDisc  = secao.titulo === 'DISCIPLINES';
+
+                secao.colunas.forEach(coluna => {
+                    const colDiv = document.createElement('div');
+                    colDiv.className = 'sheet-col';
+
+                    const colTitle = document.createElement('div');
+                    colTitle.className = 'col-title';
+                    colTitle.textContent = coluna.nome;
+                    colDiv.appendChild(colTitle);
+
+                    coluna.itens.forEach(stat => {
+                        if (ehDisc) {
+                            // ── Discipline: header expansível + lista de poderes ──
+                            const wrap = document.createElement('div');
+                            wrap.className = 'disc-wrap';
+
+                            const header = document.createElement('div');
+                            header.className = 'disc-header' + (disciplinasExpandidas.has(stat) ? ' expandido' : '');
+                            header.id = 'disc-header-' + stat;
+
+                            const nomeDisc = document.createElement('span');
+                            nomeDisc.className = 'disc-nome';
+                            nomeDisc.textContent = stat.toUpperCase();
+
+                            const dotsDisc = document.createElement('div');
+                            dotsDisc.className = 'stat-dots';
+                            let valDisc = fichaViva[stat] || 0;
+                            for (let i = 0; i < 5; i++) {
+                                const dot = document.createElement('div');
+                                dot.className = 'dot' + (i < valDisc ? ' fill' : '');
+                                dot.onclick = (e) => { e.stopPropagation(); alterarPontoFicha(stat, i, dotsDisc); };
+                                dotsDisc.appendChild(dot);
+                            }
+
+                            const toggle = document.createElement('span');
+                            toggle.className = 'disc-toggle';
+                            toggle.textContent = '▸';
+
+                            header.appendChild(nomeDisc);
+                            header.appendChild(dotsDisc);
+                            header.appendChild(toggle);
+                            header.onclick = () => toggleDiscExpandir(stat);
+
+                            // Painel de poderes
+                            const poderesPanel = document.createElement('div');
+                            poderesPanel.className = 'disc-poderes' + (disciplinasExpandidas.has(stat) ? ' aberto' : '');
+                            poderesPanel.id = 'poderes-' + stat;
+
+                            const lista = poderesDisciplinas[stat] || [];
+                            lista.forEach(poder => {
+                                const nivelDisc = fichaViva[stat] || 0;
+                                const bloqueado = poder.nivel > nivelDisc;
+
+                                const pRow = document.createElement('div');
+                                pRow.className = 'poder-row'
+                                    + (poder.formula ? ' tem-formula' : '')
+                                    + (bloqueado ? ' bloqueado' : '');
+
+                                const nomeP = document.createElement('span');
+                                nomeP.className = 'poder-nome';
+                                nomeP.textContent = poder.nome;
+
+                                const custoSpan = document.createElement('span');
+                                const custoClass = poder.custo === 'gratuito' ? 'custo-gratis'
+                                    : poder.custo === '2 Rouse' ? 'custo-rouse2' : 'custo-rouse';
+                                custoSpan.className = 'poder-custo ' + custoClass;
+                                custoSpan.textContent = poder.custo === 'gratuito' ? 'LIVRE' : poder.custo.toUpperCase();
+
+                                pRow.appendChild(nomeP);
+                                pRow.appendChild(custoSpan);
+
+                                if (poder.formula && !bloqueado) {
+                                    const btnR = document.createElement('button');
+                                    btnR.className = 'poder-btn-rolar';
+                                    btnR.title = poder.formula.attr + ' + ' + poder.formula.disc;
+                                    btnR.textContent = '▶';
+                                    btnR.onclick = (e) => {
+                                        e.stopPropagation();
+                                        ativarPoderDisciplina(poder.nome, poder.formula.attr, poder.formula.disc, pRow);
+                                    };
+                                    pRow.appendChild(btnR);
+                                    pRow.onclick = () => ativarPoderDisciplina(poder.nome, poder.formula.attr, poder.formula.disc, pRow);
+                                }
+
+                                poderesPanel.appendChild(pRow);
+                            });
+
+                            wrap.appendChild(header);
+                            wrap.appendChild(poderesPanel);
+                            colDiv.appendChild(wrap);
+
+                        } else {
+                            // ── Attribute / Skill: linha normal ──
+                            const rowDiv = document.createElement('div');
+                            rowDiv.className = 'stat-row';
+                            rowDiv.id = 'row-' + stat;
+                            rowDiv.onclick = () => alternarSelecaoParaRolagem(stat);
+
+                            const nomeSpan = document.createElement('span');
+                            nomeSpan.className = 'stat-name';
+                            nomeSpan.textContent = stat.toUpperCase();
+
+                            const dotsDiv = document.createElement('div');
+                            dotsDiv.className = 'stat-dots';
+                            let valorSalvo = fichaViva[stat] || 0;
+                            for (let i = 0; i < 5; i++) {
+                                const dot = document.createElement('div');
+                                dot.className = 'dot' + (i < valorSalvo ? ' fill' : '');
+                                dot.onclick = (e) => { e.stopPropagation(); alterarPontoFicha(stat, i, dotsDiv); };
+                                dotsDiv.appendChild(dot);
+                            }
+
+                            rowDiv.appendChild(nomeSpan);
+
+                            if (ehSkill) {
+                                const specBtn = document.createElement('span');
+                                specBtn.className = 'spec-btn' + (especialidades[stat] ? ' ativa' : '');
+                                specBtn.id = 'spec-' + stat;
+                                specBtn.title = 'Especialidade (+1 dado)';
+                                specBtn.textContent = '♄';
+                                specBtn.onclick = (e) => { e.stopPropagation(); toggleEspecialidade(stat, specBtn); };
+                                rowDiv.appendChild(specBtn);
+                            }
+
+                            rowDiv.appendChild(dotsDiv);
+                            colDiv.appendChild(rowDiv);
+                        }
+                    });
+
+                    colContainer.appendChild(colDiv);
+                });
+
+                secDiv.appendChild(colContainer);
+                container.appendChild(secDiv);
+            });
+        }
+
+        function toggleDiscExpandir(discNome) {
+            const header = document.getElementById('disc-header-' + discNome);
+            const painel = document.getElementById('poderes-' + discNome);
+            if (!header || !painel) return;
+            if (disciplinasExpandidas.has(discNome)) {
+                disciplinasExpandidas.delete(discNome);
+                header.classList.remove('expandido');
+                painel.classList.remove('aberto');
+            } else {
+                disciplinasExpandidas.add(discNome);
+                header.classList.add('expandido');
+                painel.classList.add('aberto');
+            }
+        }
+
+        function ativarPoderDisciplina(nomePoder, attr, disc, rowEl) {
+            // Remove destaque do poder anterior
+            if (poderRowAtivo) poderRowAtivo.classList.remove('poder-ativo');
+
+            // Limpa seleção de atributos anterior
+            acaoAtual.forEach(s => {
+                const el = document.getElementById('row-' + s);
+                if (el) el.classList.remove('selected');
+            });
+            acaoAtual = [];
+
+            // Seleciona atributo + disciplina
+            [attr, disc].forEach(s => {
+                acaoAtual.push(s);
+                const el = document.getElementById('row-' + s);
+                if (el) el.classList.add('selected');
+            });
+
+            // Destaca a linha do poder ativado
+            if (rowEl) {
+                rowEl.classList.add('poder-ativo');
+                poderRowAtivo = rowEl;
+            }
+
+            // Ativa poder (BP bonus só se >= 2, mas marca como ativo sempre)
+            const bp = parseInt(document.getElementById('blood-potency').value) || 0;
+            poderAtivo = true;
+            nomePoderAtivado = nomePoder;
+            document.getElementById('btn-poder').classList.add('ativo');
+
+            atualizarCaixaSoma();
+        }
+
+        function toggleEspecialidade(statName, btn) {
+            especialidades[statName] = !especialidades[statName];
+            localStorage.setItem('vtm_especialidades', JSON.stringify(especialidades));
+            btn.className = 'spec-btn' + (especialidades[statName] ? ' ativa' : '');
+            if (acaoAtual.includes(statName)) atualizarCaixaSoma();
+            salvarFichaDebounced();
+        }
+
+        function alterarPontoFicha(statName, dotIndex, dotsContainer) {
+            let valorAtual = fichaViva[statName] || 0;
+            let novoValor = (valorAtual === dotIndex + 1) ? dotIndex : dotIndex + 1;
+
+            fichaViva[statName] = novoValor;
+            localStorage.setItem('vtm_ficha_viva', JSON.stringify(fichaViva));
+            salvarFichaDebounced();
+
+            Array.from(dotsContainer.children).forEach((dot, i) => {
+                dot.className = 'dot' + (i < novoValor ? ' fill' : '');
+            });
+
+            if (acaoAtual.includes(statName)) {
+                atualizarCaixaSoma();
+            }
+        }
+
+        function alternarSelecaoParaRolagem(statName) {
+            const index = acaoAtual.indexOf(statName);
+            const rowElement = document.getElementById('row-' + statName);
+
+            if (index > -1) {
+                acaoAtual.splice(index, 1);
+                rowElement.classList.remove('selected');
+            } else {
+                acaoAtual.push(statName);
+                rowElement.classList.add('selected');
+            }
+
+            atualizarCaixaSoma();
+        }
+
+        function limparSelecao() {
+            acaoAtual.forEach(stat => {
+                const el = document.getElementById('row-' + stat);
+                if (el) el.classList.remove('selected');
+            });
+            acaoAtual = [];
+
+            surgeAtivo = false;
+            document.getElementById('btn-surge').classList.remove('ativo');
+
+            poderAtivo = false;
+            nomePoderAtivado = "";
+            document.getElementById('btn-poder').classList.remove('ativo');
+
+            if (poderRowAtivo) { poderRowAtivo.classList.remove('poder-ativo'); poderRowAtivo = null; }
+
+            atualizarCaixaSoma();
+        }
+
+        /* ---------- TOGGLE BLOOD SURGE & PODER (AUDITOR DE REGRAS) ---------- */
+        function toggleSurge() {
+            let bp = parseInt(document.getElementById('blood-potency').value) || 0;
+
+            if (bp === 0) {
+                alert('A sua Blood Potency é 0. O sangue é fraco demais para usar o Blood Surge.');
+                surgeAtivo = false;
+                document.getElementById('btn-surge').classList.remove('ativo');
+                return;
+            }
+
+            surgeAtivo = !surgeAtivo;
+            const btn = document.getElementById('btn-surge');
+            if (surgeAtivo) {
+                btn.classList.add('ativo');
+            } else {
+                btn.classList.remove('ativo');
+            }
+            atualizarCaixaSoma();
+        }
+
+        async function togglePoder() {
+            let bp = parseInt(document.getElementById('blood-potency').value) || 0;
+
+            // 1. Verificação de Potência Mínima
+            if (bp < 2) {
+                alert('A sua Blood Potency é menor que 2. Neste nível o sangue não concede dados extra passivos para o uso de Disciplinas.');
+                poderAtivo = false;
+                document.getElementById('btn-poder').classList.remove('ativo');
+                return;
+            }
+
+            // Desligar
+            if (poderAtivo) {
+                poderAtivo = false;
+                nomePoderAtivado = "";
+                document.getElementById('btn-poder').classList.remove('ativo');
+                atualizarCaixaSoma();
+                return;
+            }
+
+            // Ligar - O Árbitro de Regras Atua Aqui
+            let temDisciplinaDireta = acaoAtual.some(st => disciplinasV5.includes(st));
+            let nomePoderLocal = "";
+
+            if (temDisciplinaDireta) {
+                // Cenário A: Ele clicou na Disciplina diretamente (ex: Resolve + Auspex)
+                nomePoderLocal = "Ativação Direta de Disciplina";
+            } else {
+                // Cenário B: Não há disciplina. Vamos checar a fórmula (Ex: Wits + Resolve)
+                let chave = acaoAtual.slice().map(s => s.toUpperCase()).sort().join(",");
+                let dicResult = dicionarioPoderes[chave];
+
+                if (dicResult) {
+                    nomePoderLocal = dicResult;
+                } else {
+                    // Cenário C: Fórmula não mapeada — pede nome via modal
+                    const resp = await abrirModalInput(
+                        'PODER NÃO IDENTIFICADO',
+                        'Nenhuma Disciplina reconhecida nesta combinação. Informe o nome do poder para justificar o bônus de Sangue.',
+                        '', 'text'
+                    );
+                    if (!resp || !resp.trim()) return;
+                    nomePoderLocal = resp.trim();
+                }
+            }
+
+            // Se passou na barreira, liga o botão e salva o nome
+            poderAtivo = true;
+            nomePoderAtivado = nomePoderLocal;
+            document.getElementById('btn-poder').classList.add('ativo');
+            atualizarCaixaSoma();
+        }
+
+        /* ---------- MATEMÁTICA DE BÓNUS ---------- */
+        function salvarBP() {
+            let bp = document.getElementById('blood-potency').value;
+            localStorage.setItem('blood_potency', bp);
+            salvarFichaDebounced();
+
+            if (bp === "0" && surgeAtivo) toggleSurge();
+            if (parseInt(bp) < 2 && poderAtivo) togglePoder();
+        }
+
+        function atualizarCaixaSoma() {
+            let soma = 0;
+            acaoAtual.forEach(stat => {
+                soma += (fichaViva[stat] || 0);
+            });
+
+            let bp = parseInt(document.getElementById('blood-potency').value) || 0;
+
+            // Soma Dinâmica do Poder
+            if (poderAtivo && bp >= 2) {
+                let discBonus = (bp >= 4) ? 2 : 1;
+                soma += discBonus;
+            }
+
+            // Soma Dinâmica do Surge
+            if (surgeAtivo && bp > 0) {
+                let surgeBonus = (bp >= 5) ? 3 : (bp >= 3) ? 2 : 1;
+                soma += surgeBonus;
+            }
+
+            // Soma de Especialidades (+1 por skill selecionada com especialidade)
+            acaoAtual.forEach(stat => { if (especialidades[stat]) soma += 1; });
+
+            const inputDados = document.getElementById('num-dados');
+            if (acaoAtual.length > 0 || surgeAtivo || poderAtivo) {
+                inputDados.value = soma;
+                inputDados.style.borderColor = 'var(--sangue)';
+                setTimeout(() => { inputDados.style.borderColor = 'var(--borda-ouro)'; }, 400);
+            } else {
+                inputDados.value = '';
+            }
+        }
+
+        /* ---------- FOME ---------- */
+        function renderGotasFome() {
+            const cont = document.getElementById('gotas');
+            cont.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const g = document.createElement('span');
+                g.className = 'gota-fome' + (i < fomeAtual ? ' cheia' : '');
+                g.onclick = () => setFome(i);
+                g.appendChild(document.createElement('i'));
+                cont.appendChild(g);
+            }
+            document.getElementById('fome-valor-txt').textContent = fomeAtual + ' / 5';
+        }
+        function setFome(i) {
+            fomeAtual = (fomeAtual === i + 1) ? i : i + 1;
+            localStorage.setItem('fome', fomeAtual);
+            renderGotasFome();
+        }
+        function ajustarFome(delta) {
+            fomeAtual = Math.max(0, Math.min(5, fomeAtual + delta));
+            localStorage.setItem('fome', fomeAtual);
+            renderGotasFome();
+        }
+
+        function setBotoes(on) {
+            document.getElementById('btn-rolar').disabled = !on;
+            document.getElementById('btn-surge').disabled = !on;
+            document.getElementById('btn-poder').disabled = !on;
+            document.getElementById('btn-rouse').disabled = !on;
+            document.getElementById('num-dados').disabled = !on;
+        }
+
+        function obterIconeDado(valor, isFome) {
+            if (isFome) {
+                if (valor === 1) return '☠︎';
+                if (valor >= 6 && valor <= 9) return '☥';
+                if (valor === 10) return '༒';
+                return '•';
+            } else {
+                if (valor >= 6 && valor <= 9) return '☥';
+                if (valor === 10) return '✦';
+                return '•';
+            }
+        }
+
+        /* ---------- A MÁGICA DA ROLAGEM ---------- */
+        async function executarRolagem() {
+            if (rolando) return;
+            const jogador = document.getElementById('jogador').value.trim();
+            if (!jogador) { alert('Escreva o nome do personagem!'); return; }
+            localStorage.setItem('jogador', jogador);
+
+            let numDados = parseInt(document.getElementById('num-dados').value, 10);
+            if (!numDados || numDados < 1) { alert('Selecione os atributos na ficha ou digite os dados diretamente!'); return; }
+
+            let bp = parseInt(document.getElementById('blood-potency').value) || 0;
+
+            // Construtor da Ação Bruta enviada para o Python (com "tags" invisíveis para fatiar depois)
+            let nomeDaAcao = 'Rolagem Manual';
+            if (acaoAtual.length > 0) {
+                let partesAcao = acaoAtual.map(stat => {
+                    let pontos = fichaViva[stat] || 0;
+                    return `${stat.toUpperCase()} [${pontos}]`;
+                });
+                nomeDaAcao = partesAcao.join(' + ');
+            }
+
+            if (poderAtivo) {
+                let discBonus = (bp >= 4) ? 2 : (bp >= 2) ? 1 : 0;
+                if (discBonus > 0) {
+                    let tagPoder = ` | PODER_ATIVO: ${nomePoderAtivado} [+${discBonus} BP]`;
+                    if(nomeDaAcao === 'Rolagem Manual') nomeDaAcao = `PODER_ATIVO: ${nomePoderAtivado} [+${discBonus} BP]`;
+                    else nomeDaAcao += tagPoder;
+                }
+            }
+
+            if (surgeAtivo) {
+                let surgeBonus = (bp >= 5) ? 3 : (bp >= 3) ? 2 : 1;
+                let tagSurge = ` | SURGE: [+${surgeBonus}]`;
+                if(nomeDaAcao === 'Rolagem Manual') nomeDaAcao = `SURGE: [+${surgeBonus}]`;
+                else nomeDaAcao += tagSurge;
+            }
+
+            let statsComSpec = acaoAtual.filter(stat => especialidades[stat]);
+            if (statsComSpec.length > 0) {
+                let tagSpec = ` | SPEC: ${statsComSpec.map(s => s.toUpperCase()).join(', ')} [+${statsComSpec.length}]`;
+                if (nomeDaAcao === 'Rolagem Manual') nomeDaAcao = `SPEC: ${statsComSpec.map(s => s.toUpperCase()).join(', ')} [+${statsComSpec.length}]`;
+                else nomeDaAcao += tagSpec;
+            }
+
+            rolando = true; setBotoes(false);
+
+            const reprodutor = document.getElementById('som-dados');
+            if (reprodutor) {
+                reprodutor.currentTime = 0;
+                reprodutor.play().catch(e => {});
+            }
+
+            try {
+                const resp = await fetch('/rolar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jogador: jogador, num_dados: numDados, num_fome: fomeAtual,
+                        acao: nomeDaAcao, auto_rouse: surgeAtivo
+                    })
+                });
+
+                const data = await resp.json();
+                if (!resp.ok || data.erro) { alert(data.erro); return; }
+
+                limparSelecao();
+
+                estadoRolagem.acao = data.acao;
+                iniciarAnimacaoPainel();
+                await animarGiroDados(data.dados_normais.length + data.dados_fome.length);
+                pintarResultadoNaTela(data.resultado, data.dados_normais, data.dados_fome, true);
+
+                carregarHistorico();
+
+                // Guarda como ação pendente — não envia ao Mestre ainda
+                acaoPendente = {
+                    jogador: jogador,
+                    acao: nomeDaAcao,
+                    data: data,
+                    willpowerUsado: false
+                };
+                mostrarBotoesAcaoPendente();
+            } catch (e) {
+                alert('Erro de ligação ao servidor Flask.');
+            } finally {
+                rolando = false; setBotoes(true);
+            }
+        }
+
+        /* ---------- ANIMAÇÃO E PINTURA DO RESULTADO ---------- */
+        function iniciarAnimacaoPainel() {
+            // Limpa qualquer ação pendente anterior
+            if (acaoPendente) {
+                acaoPendente = null;
+                esconderBotoesAcaoPendente();
+            }
+
+            document.getElementById('resultado-card').style.display = 'block';
+            document.getElementById('resultado-card').className = 'resultado-card mood-neutro';
+            const vazio = document.getElementById('resultado-vazio');
+            if (vazio) { vazio.style.display = 'none'; }
+
+            document.getElementById('resultado-conteudo').style.display = 'block';
+            document.getElementById('resultado-topo').textContent = '';
+            document.getElementById('resultado-num').textContent = '';
+            document.getElementById('resultado-sub').innerHTML = '';
+            document.getElementById('btn-reroll').style.display = 'none';
+            document.getElementById('dica-reroll').style.display = 'none';
+            document.getElementById('rouse-extra').innerHTML = '';
+        }
+
+        function animarGiroDados(total) {
+            return new Promise(res => {
+                const area = document.getElementById('area-dados');
+                area.innerHTML = '';
+                const temp = [];
+                for (let i = 0; i < total; i++) {
+                    const d = document.createElement('div');
+                    d.className = 'dado dado-normal';
+                    d.textContent = (Math.floor(Math.random() * 10) + 1);
+                    area.appendChild(d);
+                    temp.push(d);
+                }
+                let t = 0;
+                const iv = setInterval(() => {
+                    temp.forEach(d => d.textContent = (Math.floor(Math.random() * 10) + 1));
+                    if (++t >= 8) { clearInterval(iv); res(); }
+                }, 45);
+            });
+        }
+
+        function pintarResultadoNaTela(resultado, normais, fome, permitirReroll) {
+            estadoRolagem.normais = normais.slice();
+            estadoRolagem.fome = fome.slice();
+            selecionadosReroll = [];
+
+            document.getElementById('resultado-card').className = 'resultado-card mood-' + resultado.tipo;
+            document.getElementById('resultado-topo').textContent = resultado.label;
+            document.getElementById('resultado-num').textContent = resultado.sucessos;
+
+            let sub = '<span class="sub-suc">SUCESSO' + (resultado.sucessos === 1 ? '' : 'S') + '</span>';
+            if (resultado.descricao) sub += '<span class="sub-desc">' + resultado.descricao + '</span>';
+            document.getElementById('resultado-sub').innerHTML = sub;
+
+            const area = document.getElementById('area-dados');
+            area.innerHTML = '';
+            normais.forEach((v, i) => area.appendChild(criarDadoDiv(v, false, i, permitirReroll)));
+            fome.forEach(v => area.appendChild(criarDadoDiv(v, true, null, false)));
+
+            if (permitirReroll) atualizarBotoesReroll();
+        }
+
+        function criarDadoDiv(valor, isFome, index, permitirReroll) {
+            const d = document.createElement('div');
+            d.innerText = obterIconeDado(valor, isFome);
+
+            if (isFome) {
+                d.className = 'dado dado-fome';
+                if (valor === 10) d.classList.add('is-crit');
+                else if (valor >= 6) d.classList.add('is-sucesso');
+                else if (valor === 1) d.classList.add('is-bestial');
+            } else {
+                d.className = 'dado dado-normal';
+                if (valor >= 6) {
+                    if (valor === 10) d.classList.add('is-crit');
+                    else d.classList.add('is-sucesso');
+                } else if (permitirReroll) {
+                    d.classList.add('is-rerolavel');
+                    d.onclick = () => clicarDadoReroll(index, d);
+                }
+            }
+            return d;
+        }
+
+        /* ---------- REROLL (FORÇA DE VONTADE) ---------- */
+        function clicarDadoReroll(index, el) {
+            const pos = selecionadosReroll.indexOf(index);
+            if (pos > -1) {
+                selecionadosReroll.splice(pos, 1);
+                el.classList.remove('is-selecionado');
+            } else {
+                if (selecionadosReroll.length >= 3) {
+                    alert('Lembre-se: O Gasto de Força de Vontade rerrola no máximo 3 dados normais!');
+                    return;
+                }
+                selecionadosReroll.push(index);
+                el.classList.add('is-selecionado');
+            }
+            atualizarBotoesReroll();
+        }
+
+        function atualizarBotoesReroll() {
+            const btn = document.getElementById('btn-reroll');
+            const dica = document.getElementById('dica-reroll');
+            const temFalhas = estadoRolagem.normais.some(v => v < 6);
+
+            if (selecionadosReroll.length > 0) {
+                btn.textContent = 'GASTAR 1 PV · RERROLAR ' + selecionadosReroll.length + ' DADO' + (selecionadosReroll.length > 1 ? 'S' : '');
+                btn.style.display = 'block';
+                dica.style.display = 'none';
+            } else {
+                btn.style.display = 'none';
+                dica.style.display = temFalhas ? 'block' : 'none';
+            }
+        }
+
+        async function gastarWillpower() {
+            if (selecionadosReroll.length === 0) return;
+            const jogador = document.getElementById('jogador').value.trim();
+            const btn = document.getElementById('btn-reroll');
+            btn.disabled = true;
+
+            const reprodutor = document.getElementById('som-dados');
+            if (reprodutor) { reprodutor.currentTime = 0; reprodutor.play().catch(e=>{}); }
+
+            try {
+                const resp = await fetch('/reroll', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jogador: jogador, dados_normais: estadoRolagem.normais, dados_fome: estadoRolagem.fome,
+                        indices_reroll: selecionadosReroll, acao: estadoRolagem.acao
+                    })
+                });
+                const data = await resp.json();
+                if (!resp.ok || data.erro) { alert(data.erro); return; }
+                pintarResultadoNaTela(data.resultado, data.dados_normais, data.dados_fome, false);
+                document.getElementById('rouse-extra').innerHTML = '<span style="color: var(--ouro);">1 Ponto de Força de Vontade gasto</span>';
+                carregarHistorico();
+
+                // Desconta automaticamente 1 WP
+                alterarRecurso('willpower', -1);
+
+                // Atualiza a ação pendente com os novos resultados
+                if (acaoPendente) {
+                    acaoPendente.data.resultado = data.resultado;
+                    acaoPendente.data.dados_normais = data.dados_normais;
+                    acaoPendente.data.dados_fome = data.dados_fome;
+                    acaoPendente.willpowerUsado = true;
+                    mostrarBotoesAcaoPendente();
+                }
+            } catch (e) {
+                alert('Erro de rede.');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        /* ---------- ROUSE CHECK MANUAL ---------- */
+        async function rouseCheck() {
+            if (rolando) return;
+            const jogador = document.getElementById('jogador').value.trim();
+            if (!jogador) { alert('Escreva o nome do personagem!'); return; }
+            localStorage.setItem('jogador', jogador);
+
+            setBotoes(false);
+            const reprodutor = document.getElementById('som-dados');
+            if (reprodutor) { reprodutor.currentTime = 0; reprodutor.play().catch(e=>{}); }
+
+            try {
+                const resp = await fetch('/rouse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jogador: jogador })
+                });
+                const data = await resp.json();
+                if (!resp.ok || data.erro) { alert(data.erro); return; }
+
+                iniciarAnimacaoPainel();
+                document.getElementById('resultado-card').className = 'resultado-card mood-' + (data.rouse.sucesso ? 'sucesso' : 'messy');
+                document.getElementById('resultado-topo').textContent = 'Rouse Check (Manual)';
+                document.getElementById('resultado-sub').innerHTML = '<span class="sub-desc">' + (data.rouse.sucesso ? 'A Besta dorme.' : 'A sua fome aumentou.') + '</span>';
+
+                const area = document.getElementById('area-dados');
+                const d = document.createElement('div');
+                d.className = 'dado dado-fome' + (data.rouse.dado >= 6 ? ' is-sucesso' : '');
+                d.innerText = data.rouse.dado >= 6 ? '☥' : '•';
+                area.appendChild(d);
+
+                if (!data.rouse.sucesso) ajustarFome(1);
+                carregarHistorico();
+                const textoRouse = `[ROUSE CHECK] ${jogador}\nDado: ${data.rouse.dado} — ${data.rouse.label}`;
+                await postarRolagemNoChat(jogador, textoRouse);
+            } catch (e) {
+                alert('Erro de ligação ao testar o Rouse.');
+            } finally {
+                setBotoes(true);
+            }
+        }
+
+        /* ---------- FORMATADOR DO HISTÓRICO COM CORES E TAGS ---------- */
+        function formatarEntradaHistorico(j, paraCopiar = false) {
+            const hora = j.hora ? `[${j.hora}] ` : '';
+            const jogadorTxt = j.jogador;
+
+            // Rouse Check Manual ou isolado
+            if (j.rouse && !j.resultado) {
+                let acaoBruta = j.acao || '';
+                if (acaoBruta === 'Custo de Poder (Rouse automático)') acaoBruta = 'Teste de Sangue (Automático)';
+                const acaoTxt = acaoBruta ? `➔ ${acaoBruta}` : '';
+                const resTxt = j.rouse.sucesso ? 'Sucesso (A Besta dorme)' : 'Falha (+1 Fome)';
+
+                if (paraCopiar) return `${hora}${jogadorTxt} ${acaoTxt}\nResultado: ${resTxt}`;
+
+                const cor = j.rouse.sucesso ? 'var(--ouro)' : 'var(--sangue)';
+                return `
+                    <div class="hist-item">
+                        <span style="color:#888;">${hora}</span>
+                        <strong style="color:var(--ouro); font-size:1.1rem;">${jogadorTxt}</strong>
+                        <span style="color:#999; font-size:0.9rem;">${acaoTxt}</span><br>
+                        <strong style="color:${cor};">Resultado:</strong>
+                        <span style="color:${cor};">${resTxt}</span>
+                    </div>`;
+            }
+
+            // Tratamento das "Tags" de Ação enviadas pelo JS
+            let acaoBruta = j.acao || '';
+            let partesAcao = acaoBruta.split(' | ');
+
+            // Pega a base da rolagem (Ex: WITS [3] + RESOLVE [3])
+            let baseRoll = partesAcao[0];
+            if (baseRoll.startsWith('PODER_ATIVO: ') || baseRoll.startsWith('SURGE: ')) {
+                 baseRoll = "Rolagem Simples";
+            }
+
+            let htmlAcao = `➔ ${baseRoll}`;
+            let textAcao = `➔ ${baseRoll}`; // Para o Copiar
+
+            partesAcao.slice(1).forEach(p => {
+                if (p.startsWith('PODER_ATIVO:')) {
+                    let desc = p.replace('PODER_ATIVO: ', '');
+                    htmlAcao += `<br><span style="color:#d4b47c;"><b>☨ Poder Ativado:</b> ${desc}</span>`;
+                    textAcao += `\n☨ Poder Ativado: ${desc}`;
+                }
+                if (p.startsWith('SURGE:')) {
+                    let desc = p.replace('SURGE: ', '');
+                    htmlAcao += `<br><span style="color:var(--sangue);"><b>☥ Blood Surge Ativo</b> ${desc}</span>`;
+                    textAcao += `\n☥ Blood Surge Ativo: ${desc}`;
+                }
+                if (p.startsWith('SPEC:')) {
+                    let desc = p.replace('SPEC: ', '');
+                    htmlAcao += `<br><span style="color:var(--ouro);"><b>♄ Especialidade:</b> ${desc}</span>`;
+                    textAcao += `\n♄ Especialidade: ${desc}`;
+                }
+            });
+
+            const r = j.resultado || {};
+            const lbl = r.label || 'Rolagem';
+            const suc = r.sucessos || 0;
+            const normais = (j.dados_normais || []).join(', ');
+            const fome = (j.dados_fome || []).join(', ');
+
+            if (paraCopiar) {
+                let txt = `${hora}${jogadorTxt} ${textAcao}\nResultado: ${lbl} (${suc} sucessos)\n↳ `;
+                if(normais) txt += `Normais: [${normais}]`;
+                if(normais && fome) txt += ` | `;
+                if(fome) txt += `Fome: [${fome}]`;
+
+                if (j.rouse_anexo) {
+                    let txtRouse = j.rouse_anexo.sucesso ? 'Sucesso (A Besta dorme)' : 'Falha (+1 Fome)';
+                    txt += `\n⚠️ Rouse Check (Blood Surge): ${txtRouse}`;
+                }
+                return txt;
+            }
+
+            let cor = 'var(--ouro)';
+            if (r.tipo === 'falha') cor = '#888';
+            if (r.tipo === 'bestial' || r.tipo === 'messy') cor = 'var(--sangue)';
+            if (r.tipo === 'crit') cor = 'var(--ouro-claro)';
+
+            let html = `
+                <div class="hist-item">
+                    <span style="color:#888;">${hora}</span>
+                    <strong style="color:var(--ouro); font-size:1.1rem;">${jogadorTxt}</strong>
+                    <span style="color:#aaa; font-size:0.9rem;">${htmlAcao}</span><br>
+                    <strong style="color:${cor};">Resultado:</strong>
+                    <span style="color:${cor};">${lbl} (${suc} sucessos)</span><br>
+                    <span style="color:#777; font-size:0.85rem; display:block; margin-top:4px;">↳ `;
+
+            if(normais) html += `Normais: ${normais}`;
+            if(normais && fome) html += ` | `;
+            if(fome) html += `Fome: ${fome}`;
+            html += `</span>`;
+
+            if (j.rouse_anexo) {
+                let corRouse = j.rouse_anexo.sucesso ? 'var(--ouro)' : 'var(--sangue)';
+                let txtRouse = j.rouse_anexo.sucesso ? 'Sucesso (A Besta dorme)' : 'Falha (+1 Fome)';
+                html += `<span style="display:block; margin-top:6px; padding-top:6px; border-top:1px solid var(--borda-ouro);">
+                    <strong style="color:var(--sangue);">⚠️ Rouse Check (Blood Surge):</strong>
+                    <span style="color:${corRouse};">${txtRouse}</span>
+                </span>`;
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        async function carregarHistorico() {
+            try {
+                const resp = await fetch('/historico');
+                const data = await resp.json();
+
+                let historicoCru = data.historico || [];
+                let historicoProcessado = [];
+
+                for (let i = 0; i < historicoCru.length; i++) {
+                    let item = historicoCru[i];
+
+                    if (item.acao === 'Custo de Poder (Rouse automático)' && (i + 1) < historicoCru.length) {
+                        let jogadaPrincipal = historicoCru[i + 1];
+                        jogadaPrincipal.rouse_anexo = item.rouse;
+                        historicoProcessado.push(jogadaPrincipal);
+                        i++;
+                    } else {
+                        historicoProcessado.push(item);
+                    }
+                }
+
+                window.historicoAtual = historicoProcessado;
+
+                const hash = JSON.stringify(window.historicoAtual);
+                if (hash === ultimoHashHistorico) return;
+                ultimoHashHistorico = hash;
+
+                const cont = document.getElementById('historico-texto');
+                const btnCopiar = document.getElementById('btn-copiar');
+
+                if (!window.historicoAtual.length) {
+                    cont.textContent = 'Nenhuma rolagem nesta sessão.';
+                    btnCopiar.style.display = 'none';
+                    return;
+                }
+
+                cont.innerHTML = window.historicoAtual.map(j => formatarEntradaHistorico(j, false)).join('');
+                btnCopiar.style.display = 'block';
+
+            } catch (e) {}
+        }
+        setInterval(carregarHistorico, 10000);
+
+        async function copiarUltimaJogada() {
+            if (!window.historicoAtual || window.historicoAtual.length === 0) return;
+
+            const textoLimpo = formatarEntradaHistorico(window.historicoAtual[0], true);
+            if (!textoLimpo) return;
+
+            try {
+                await navigator.clipboard.writeText(textoLimpo);
+                const btn = document.getElementById('btn-copiar');
+                btn.textContent = 'COPIADO!';
+                setTimeout(() => { btn.textContent = 'COPIAR ÚLTIMA'; }, 2000);
+            } catch (e) {
+                alert("O seu navegador bloqueou a cópia automática.");
+            }
+        }
+
+        /* ---------- FICHA NO SERVIDOR ---------- */
+        let _fichaTimer = null;
+        function salvarFichaDebounced() {
+            clearTimeout(_fichaTimer);
+            _fichaTimer = setTimeout(salvarFichaServidor, 800);
+        }
+
+        function salvarFichaServidor() {
+            const jogador = document.getElementById('jogador').value.trim();
+            if (!jogador) return;
+            fetch('/ficha', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jogador: jogador,
+                    ficha: {
+                        stats: fichaViva,
+                        especialidades: especialidades,
+                        blood_potency: document.getElementById('blood-potency').value,
+                        fome: fomeAtual
+                    }
+                })
+            }).catch(() => {});
+        }
+
+        function salvarAvatar(url) {
+            currentAvatarUrl = url || '';
+            localStorage.setItem('vtm_avatar_url', currentAvatarUrl);
+            atualizarAvatarVisual(currentAvatarUrl);
+            // Salva avatar separado (via POST /avatar) — nao infla mais a ficha
+            if (currentAvatarUrl) {
+                fetch('/avatar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ avatar: currentAvatarUrl })
+                }).catch(() => {});
+            }
+            salvarFichaDebounced();
+        }
+
+        function atualizarAvatarVisual(url) {
+            const avatarEl = document.getElementById('avatar-visual');
+            if (url && (url.startsWith('http') || url.startsWith('data:'))) {
+                avatarEl.innerHTML = `<img src="${url}" alt="Avatar" onerror="this.parentElement.innerHTML='<div class=avatar-placeholder>Imagem não carregou</div>'">`;
+            } else {
+                avatarEl.innerHTML = '<div class="avatar-placeholder">Clique para enviar</div>';
+            }
+        }
+
+        function processarUploadAvatar(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const dataUrl = e.target.result;
+                atualizarAvatarVisual(dataUrl);
+                salvarAvatar(dataUrl);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function carregarFichaServidor() {
+            const jogador = document.getElementById('jogador').value.trim();
+            if (!jogador) return;
+            try {
+                const resp = await fetch('/ficha?jogador=' + encodeURIComponent(jogador));
+                const data = await resp.json();
+                if (data.dados && Object.keys(data.dados).length > 0) {
+                    const d = data.dados;
+                    if (d.stats) fichaViva = d.stats;
+                    if (d.especialidades) especialidades = d.especialidades;
+                    if (d.blood_potency) document.getElementById('blood-potency').value = d.blood_potency;
+                    if (d.fome !== undefined) { fomeAtual = d.fome; renderGotasFome(); }
+                    if (d.avatar) {
+                        currentAvatarUrl = d.avatar;
+                        localStorage.setItem('vtm_avatar_url', currentAvatarUrl);
+                        atualizarAvatarVisual(d.avatar);
+                        const nomeJogador = document.getElementById('jogador').value.trim();
+                        avataresPorJogador[nomeJogador] = d.avatar;
+                    }
+                    localStorage.setItem('vtm_ficha_viva', JSON.stringify(fichaViva));
+                    localStorage.setItem('vtm_especialidades', JSON.stringify(especialidades));
+                    inicializarFicha();
+                }
+            } catch(e) {}
+        }
+
+        /* ---------- AVATARES NO CHAT ---------- */
+        const avataresPorJogador = {}; // cache de avatares de jogadores
+        const avataresPorNPC = {};     // cache de avatares de NPCs
+
+        async function carregarAvatarNPCs() {
+            try {
+                const resp = await fetch('/npc-avatar');
+                const data = await resp.json();
+                Object.assign(avataresPorNPC, data);
+            } catch(e) {}
+        }
+
+        async function salvarAvatarNPC(nome, dataUrl) {
+            avataresPorNPC[nome] = dataUrl;
+            try {
+                await fetch('/npc-avatar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, avatar: dataUrl })
+                });
+            } catch(e) {}
+        }
+
+        function atualizarAvatarNPCNoDOM(nomeNPC, url) {
+            // Atualiza todos os wrappers de avatar deste NPC no chat
+            const wrappers = document.querySelectorAll(`[data-npc="${nomeNPC}"]`);
+            wrappers.forEach(w => {
+                const img = w.querySelector('img');
+                if (img) {
+                    img.src = url;
+                } else {
+                    const imgDiv = w.querySelector('div');
+                    if (imgDiv) {
+                        imgDiv.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+                    }
+                }
+            });
+        }
+
+        function criarAvatarNPCClicavel(nomeNPC) {
+            const wrapper = document.createElement('div');
+            wrapper.setAttribute('data-npc', nomeNPC);
+            wrapper.style.cssText = 'flex-shrink:0;margin-top:2px;cursor:pointer;position:relative;';
+            wrapper.title = 'Clique para adicionar foto de ' + nomeNPC;
+
+            const url = avataresPorNPC[nomeNPC] || '';
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.style.display = 'none';
+
+            const img = document.createElement('div');
+            img.style.cssText = 'width:44px;height:44px;border-radius:50%;border:1px solid var(--sangue);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#1a0505;';
+
+            if (url) {
+                img.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+            } else {
+                img.innerHTML = '<span style="color:#5a2222;font-size:1.2rem;">†</span>';
+            }
+
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    const dataUrl = ev.target.result;
+                    img.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+                    await salvarAvatarNPC(nomeNPC, dataUrl);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            const label = document.createElement('label');
+            label.style.cssText = 'cursor:pointer;display:block;';
+            label.appendChild(img);
+            label.appendChild(fileInput);
+            // Conecta label ao input
+            const inputId = 'npc-file-' + nomeNPC.replace(/\s+/g, '-');
+            fileInput.id = inputId;
+            label.htmlFor = inputId;
+
+            wrapper.appendChild(label);
+            return wrapper;
+        }
+
+        async function obterAvatarJogador(nome) {
+            if (avataresPorJogador[nome] !== undefined) return avataresPorJogador[nome];
+            try {
+                const resp = await fetch('/avatar?jogador=' + encodeURIComponent(nome));
+                const data = await resp.json();
+                const url = data.avatar || '';
+                avataresPorJogador[nome] = url;
+                return url;
+            } catch(e) {
+                avataresPorJogador[nome] = '';
+                return '';
+            }
+        }
+
+        function miniAvatarHTML(url, cor) {
+            if (url && (url.startsWith('http') || url.startsWith('data:'))) {
+                return `<img src="${url}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid ${cor};flex-shrink:0;" onerror="this.style.display='none'">`;
+            }
+            return '';
+        }
+
+        function stripAudioTags(texto) {
+            return texto.replace(/\[[^\]]{1,60}\]/g, '').replace(/\s{2,}/g, ' ').trim();
+        }
+
+        function criarMsgDiv(autor, textoHTML, isMestre, avatarUrl) {
+            const cor = isMestre ? 'var(--sangue)' : 'var(--ouro)';
+            const bg  = isMestre ? '#2a1515' : '#1a1a1a';
+            const div = document.createElement('div');
+            div.style.cssText = `padding:12px 14px;border-radius:6px;background:${bg};border-left:4px solid ${cor};display:flex;gap:10px;align-items:flex-start;`;
+
+            const avatar = miniAvatarHTML(avatarUrl, cor);
+            const textoLimpo = isMestre ? stripAudioTags(textoHTML) : textoHTML;
+            const textoTTS   = isMestre ? textoHTML : '';
+
+            div.innerHTML = `
+                ${avatar ? `<div style="flex-shrink:0;margin-top:2px;">${avatar}</div>` : ''}
+                <div style="flex:1;min-width:0;">
+                    <strong style="display:block;color:${cor};font-family:'Cinzel',serif;font-size:0.85rem;letter-spacing:1px;margin-bottom:5px;">${autor}</strong>
+                    <span style="color:#e0e0e0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;text-align:justify;">${textoLimpo}</span>
+                </div>`;
+
+            // Botão OUVIR (apenas para o Mestre) — closure captura o texto, sem embutir no HTML.
+            if (isMestre) {
+                const corpoDiv = div.querySelector('div');
+                const btnPlay = document.createElement('button');
+                btnPlay.textContent = '▶ OUVIR';
+                btnPlay.title = 'Ouvir narração';
+                btnPlay.style.cssText = "margin-top:8px;background:none;border:1px solid var(--sangue);color:var(--sangue);border-radius:4px;padding:3px 10px;font-size:0.75rem;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px;opacity:0.8;";
+                btnPlay.onclick = () => reproduzirTTS(btnPlay, textoTTS);
+                if (corpoDiv) corpoDiv.appendChild(btnPlay);
+            }
+            return div;
+        }
+
+        let _audioAtual = null;
+
+        async function reproduzirTTS(botao, textoComTags) {
+            if (_audioAtual) { _audioAtual.pause(); _audioAtual = null; }
+            const textoPlano = textoComTags.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            const labelOrig = botao.textContent;
+            botao.textContent = '⏳ CARREGANDO...';
+            botao.disabled = true;
+            try {
+                const resp = await fetch('/tts', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({texto: textoPlano})
+                });
+                if (!resp.ok) {
+                    botao.textContent = '✗ ERRO';
+                    setTimeout(() => { botao.textContent = labelOrig; botao.disabled = false; }, 4000);
+                    return;
+                }
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                _audioAtual = new Audio(url);
+                _audioAtual.onended = () => { botao.textContent = labelOrig; botao.disabled = false; URL.revokeObjectURL(url); };
+                _audioAtual.play();
+                botao.textContent = '■ PARAR';
+                botao.disabled = false;
+                botao.onclick = () => { _audioAtual.pause(); _audioAtual = null; botao.textContent = labelOrig; botao.onclick = () => reproduzirTTS(botao, textoComTags); };
+            } catch(e) {
+                botao.textContent = '✗ ERRO';
+                setTimeout(() => { botao.textContent = labelOrig; botao.disabled = false; }, 3000);
+            }
+        }
+
+        /* ---------- AÇÃO PENDENTE (CONFIRMAÇÃO) ---------- */
+        function mostrarBotoesAcaoPendente() {
+            document.getElementById('btn-confirmar').style.display = 'block';
+            document.getElementById('btn-cancelar-acao').style.display = 'block';
+            document.getElementById('aviso-acao-pendente').style.display = 'block';
+        }
+
+        function esconderBotoesAcaoPendente() {
+            document.getElementById('btn-confirmar').style.display = 'none';
+            document.getElementById('btn-cancelar-acao').style.display = 'none';
+            document.getElementById('aviso-acao-pendente').style.display = 'none';
+        }
+
+        function cancelarAcao() {
+            if (!confirm('Cancelar esta ação? Os dados serão descartados e o Mestre não saberá da rolagem.')) return;
+            acaoPendente = null;
+            esconderBotoesAcaoPendente();
+            document.getElementById('resultado-card').style.display = 'none';
+        }
+
+        let _resolveModalInput = null;
+
+        function abrirModalInput(titulo, descricao, valorInicial, tipo) {
+            return new Promise(resolve => {
+                _resolveModalInput = resolve;
+                document.getElementById('modal-input-titulo').textContent = titulo;
+                document.getElementById('modal-input-desc').textContent = descricao;
+                const campo = document.getElementById('modal-input-campo');
+                campo.type = tipo || 'text';
+                campo.value = valorInicial !== undefined ? valorInicial : '';
+                campo.placeholder = tipo === 'number' ? '0' : '';
+                document.getElementById('modal-input-generico').classList.add('ativo');
+                setTimeout(() => { campo.focus(); if (tipo === 'number') campo.select(); }, 80);
+            });
+        }
+
+        function confirmarModalInput() {
+            const val = document.getElementById('modal-input-campo').value;
+            document.getElementById('modal-input-generico').classList.remove('ativo');
+            if (_resolveModalInput) { _resolveModalInput(val); _resolveModalInput = null; }
+        }
+
+        function cancelarModalInput() {
+            document.getElementById('modal-input-generico').classList.remove('ativo');
+            if (_resolveModalInput) { _resolveModalInput(null); _resolveModalInput = null; }
+        }
+
+        let _resolveDescricao = null;
+
+        function abrirModalDescricao() {
+            return new Promise(resolve => {
+                _resolveDescricao = resolve;
+                const modal = document.getElementById('modal-descricao');
+                const input = document.getElementById('modal-descricao-input');
+                input.value = '';
+                modal.classList.add('ativo');
+                setTimeout(() => input.focus(), 80);
+            });
+        }
+
+        function confirmarDescricaoModal() {
+            const val = document.getElementById('modal-descricao-input').value.trim();
+            document.getElementById('modal-descricao').classList.remove('ativo');
+            if (_resolveDescricao) { _resolveDescricao(val || null); _resolveDescricao = null; }
+        }
+
+        function cancelarDescricaoModal() {
+            document.getElementById('modal-descricao').classList.remove('ativo');
+            if (_resolveDescricao) { _resolveDescricao(null); _resolveDescricao = null; }
+        }
+
+        async function confirmarAcao() {
+            if (!acaoPendente) return;
+
+            const chatInput = document.getElementById('chat-input');
+            let descricao = chatInput.value.trim();
+
+            if (!descricao) {
+                descricao = await abrirModalDescricao();
+                if (!descricao) return;
+            }
+
+            const btn = document.getElementById('btn-confirmar');
+            btn.disabled = true;
+            const textoOriginal = btn.textContent;
+            btn.textContent = 'ENVIANDO...';
+
+            // Monta a mensagem completa: descrição + rolagem
+            const textoRolagem = montarTextoRolagem(
+                acaoPendente.jogador,
+                acaoPendente.acao,
+                acaoPendente.data
+            );
+
+            let textoCompleto = `${descricao}\n\n─── ─── ───\n${textoRolagem}`;
+            if (acaoPendente.willpowerUsado) {
+                textoCompleto += `\n☨ Força de Vontade gasta`;
+            }
+
+            // Limpa o estado pendente ANTES de enviar
+            acaoPendente = null;
+            esconderBotoesAcaoPendente();
+
+            // Coloca o texto no input do chat e dispara o fluxo normal de envio
+            chatInput.value = textoCompleto;
+            await enviarMensagemChat();
+
+            // Restaura o botão (para a próxima rolagem)
+            btn.disabled = false;
+            btn.textContent = textoOriginal;
+        }
+
+        /* ---------- ROLAGEM → CHAT ---------- */
+        function montarTextoRolagem(jogador, acao, data) {
+            const r = data.resultado;
+            const normais = data.dados_normais.join(', ');
+            const fome = data.dados_fome.join(', ');
+            let txt = `[ROLAGEM] ${jogador} — ${acao}`;
+            if (normais) txt += `\nNormais: [${normais}]`;
+            if (fome) txt += ` | Fome: [${fome}]`;
+            txt += `\nResultado: ${r.label} — ${r.sucessos} sucesso${r.sucessos !== 1 ? 's' : ''}`;
+            if (r.descricao) txt += ` (${r.descricao})`;
+            if (data.rouse) txt += `\nRouse Check automático: ${data.rouse.label}`;
+            return txt;
+        }
+
+        async function postarRolagemNoChat(jogador, texto) {
+            try {
+                await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jogador: jogador, texto: texto })
+                });
+                await carregarChat(true);
+            } catch(e) {}
+        }
+
+        /* ---------- RECURSOS (WP, HEALTH, HUMANITY) ---------- */
+        let recursosAtual = { willpower: 5, health: 3, humanity: 7 };
+
+        async function carregarRecursos() {
+            try {
+                const resp = await fetch('/recursos');
+                const data = await resp.json();
+                recursosAtual = data;
+                atualizarVisuaisRecursos();
+            } catch (e) {}
+        }
+
+        function atualizarVisuaisRecursos() {
+            document.getElementById('wp-valor').textContent = recursosAtual.willpower;
+            document.getElementById('health-valor').textContent = recursosAtual.health;
+            document.getElementById('humanity-valor').textContent = recursosAtual.humanity;
+        }
+
+        async function alterarRecurso(tipo, delta) {
+            const novoValor = Math.max(0, recursosAtual[tipo] + delta);
+            recursosAtual[tipo] = novoValor;
+
+            try {
+                await fetch('/recursos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(recursosAtual)
+                });
+                atualizarVisuaisRecursos();
+            } catch (e) {
+                alert('Erro ao salvar recurso');
+            }
+        }
+
+        async function abrirEditarRecurso(tipo) {
+            const labels = { willpower: 'FORÇA DE VONTADE', health: 'SAÚDE', humanity: 'HUMANIDADE' };
+            const resp = await abrirModalInput(
+                labels[tipo] || tipo.toUpperCase(),
+                'Digite o novo valor (0–10):',
+                recursosAtual[tipo], 'number'
+            );
+            if (resp !== null) {
+                const valor = Math.max(0, parseInt(resp) || 0);
+                recursosAtual[tipo] = valor;
+                fetch('/recursos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(recursosAtual)
+                }).then(() => atualizarVisuaisRecursos()).catch(() => {});
+            }
+        }
+
+        /* ---------- NOTAS PRIVADAS ---------- */
+        async function carregarNotas() {
+            try {
+                const resp = await fetch('/notas');
+                const data = await resp.json();
+                renderizarNotas(data.notas);
+            } catch (e) {}
+        }
+
+        function renderizarNotas(notas) {
+            const lista = document.getElementById('notas-lista');
+            lista.innerHTML = '';
+            notas.forEach(nota => {
+                const el = document.createElement('div');
+                el.className = 'nota-item';
+                el.innerHTML = `
+                    <span>${nota.conteudo}</span>
+                    <button class="btn-deletar" onclick="deletarNota(${nota.id})">✕</button>
+                `;
+                lista.appendChild(el);
+            });
+        }
+
+        async function adicionarNota() {
+            const input = document.getElementById('nota-input');
+            const conteudo = input.value.trim();
+            if (!conteudo) return;
+
+            try {
+                await fetch('/notas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ conteudo })
+                });
+                input.value = '';
+                carregarNotas();
+            } catch (e) {
+                alert('Erro ao salvar nota');
+            }
+        }
+
+        async function deletarNota(id) {
+            if (!confirm('Deletar nota?')) return;
+            try {
+                await fetch(`/notas/${id}`, { method: 'DELETE' });
+                carregarNotas();
+            } catch (e) {
+                alert('Erro ao deletar nota');
+            }
+        }
+
+        document.getElementById('nota-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') adicionarNota();
+        });
+
+        /* ---------- POLLING (substituto do SSE para PythonAnywhere) ---------- */
+        let estaRecebendoStream = false;   // true enquanto o sender processa HTTP stream
+        let sseStreaming = false;           // true enquanto o receiver processa stream do Mestre
+        let sseAiDiv = null;
+        let sseTextSpan = null;
+        let sseTextoAcumulado = '';
+        let ssePensandoSpan = null;
+        let ssePensandoTexto = '';
+        let sseNpcDiv = null;
+        let sseNpcTextSpan = null;
+        let sseNpcTexto = '';
+
+        let pollAfterId = -1;
+        let pollTimer = null;
+        let pollFastMode = false;
+
+        function sseFinalizarNPC() {
+            if (sseNpcDiv) {
+                const cur = sseNpcDiv.querySelector('.cursor-streaming');
+                if (cur) cur.remove();
+            }
+            sseNpcDiv = null; sseNpcTextSpan = null; sseNpcTexto = '';
+        }
+
+        function sseCriarBlocoNPC(nome) {
+            sseFinalizarNPC();
+            const div = document.createElement('div');
+            div.style.cssText = 'padding:12px 14px;border-radius:6px;background:#1a0a0a;border-left:4px solid var(--sangue);display:flex;gap:10px;align-items:flex-start;';
+            const avatarEl = criarAvatarNPCClicavel(nome);
+            const corpo = document.createElement('div');
+            corpo.style.cssText = 'flex:1;min-width:0;';
+            corpo.innerHTML = `<strong style="display:block;color:var(--sangue);font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:2px;margin-bottom:5px;">${nome.toUpperCase()}</strong>`;
+            const span = document.createElement('span');
+            span.style.cssText = 'color:#e0d0d0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;font-style:italic;';
+            const cur = document.createElement('span');
+            cur.className = 'cursor-streaming';
+            corpo.appendChild(span); corpo.appendChild(cur);
+            div.appendChild(avatarEl); div.appendChild(corpo);
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            sseNpcDiv = div; sseNpcTextSpan = span;
+        }
+
+        /* ---------- POLLING (substituto do SSE para PythonAnywhere) ---------- */
+
+        function processarEventoPoll(ev) {
+            const jogadorAtual = document.getElementById('jogador').value.trim();
+
+            switch (ev.tipo) {
+                case 'ping':
+                    break;
+
+                case 'mensagem':
+                    if (ev.autor !== jogadorAtual) {
+                        obterAvatarJogador(ev.autor).then(avatarUrl => {
+                            const msgDiv = criarMsgDiv(ev.autor, formatarTextoChat(ev.texto), false, avatarUrl);
+                            chatBox.appendChild(msgDiv);
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        });
+                    }
+                    break;
+
+                case 'mestre_inicio':
+                    if (estaRecebendoStream) break;
+                    // Se o chat ainda mostra o botão "ABRIR SESSÃO", limpa antes de renderizar
+                    if (document.getElementById('btn-abrir-sessao')) chatBox.innerHTML = '';
+                    sseStreaming = true;
+                    sseTextoAcumulado = '';
+                    sseFinalizarNPC();
+
+                    const typingPoll = document.createElement('div');
+                    typingPoll.id = 'poll-typing';
+                    typingPoll.className = 'mestre-typing';
+                    typingPoll.innerHTML = '<span>MESTRE ESTÁ RESPONDENDO</span><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+                    chatBox.appendChild(typingPoll);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+
+                    sseAiDiv = document.createElement('div');
+                    sseAiDiv.style.cssText = 'padding:14px 16px;border-radius:6px;background:#2a1515;border-left:4px solid var(--sangue);';
+                    sseAiDiv.innerHTML = '<strong style="display:block;color:var(--sangue);font-family:Cinzel,serif;font-size:0.85rem;letter-spacing:1px;margin-bottom:6px;">MESTRE (IA)</strong>';
+                    ssePensandoTexto = '';
+                    ssePensandoSpan = document.createElement('span');
+                    ssePensandoSpan.style.cssText = 'color:#8a6a6a;font-family:Inter,sans-serif;font-size:13px;line-height:1.5;display:block;font-style:italic;opacity:0.75;max-height:90px;overflow:hidden;border-bottom:1px dashed #4a2a2a;padding-bottom:8px;margin-bottom:8px;';
+                    sseAiDiv.appendChild(ssePensandoSpan);
+                    sseTextSpan = document.createElement('span');
+                    sseTextSpan.style.cssText = 'color:#e0e0e0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;text-align:justify;';
+                    const cursorPoll = document.createElement('span');
+                    cursorPoll.className = 'cursor-streaming';
+                    cursorPoll.id = 'poll-cursor';
+                    sseAiDiv.appendChild(sseTextSpan);
+                    sseAiDiv.appendChild(cursorPoll);
+
+                    const tEl2 = document.getElementById('poll-typing');
+                    if (tEl2) tEl2.remove();
+                    chatBox.appendChild(sseAiDiv);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    pollFastMode = true;
+                    break;
+
+                case 'mestre_pensando':
+                    if (estaRecebendoStream || !sseStreaming || !ssePensandoSpan) break;
+                    ssePensandoTexto += ev.delta;
+                    ssePensandoSpan.textContent = '🜍 ' + ssePensandoTexto;
+                    ssePensandoSpan.scrollTop = ssePensandoSpan.scrollHeight;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    break;
+
+                case 'mestre_token':
+                    if (estaRecebendoStream || !sseStreaming || !sseTextSpan) break;
+                    // Primeiro token real: remove a área de raciocínio.
+                    if (ssePensandoSpan && ssePensandoSpan.parentNode) { ssePensandoSpan.remove(); ssePensandoSpan = null; }
+                    sseTextoAcumulado += ev.delta;
+                    sseTextSpan.innerHTML = formatarTextoChat(sseTextoAcumulado);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    break;
+
+                case 'mestre_npc_inicio':
+                    if (estaRecebendoStream || !sseStreaming) break;
+                    sseCriarBlocoNPC(ev.nome);
+                    break;
+
+                case 'mestre_token_npc':
+                    if (estaRecebendoStream || !sseStreaming || !sseNpcTextSpan) break;
+                    sseNpcTexto += ev.delta;
+                    sseNpcTextSpan.innerHTML = formatarTextoChat(sseNpcTexto);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    break;
+
+                case 'mestre_done':
+                    if (estaRecebendoStream) break;
+                    sseStreaming = false;
+                    pollFastMode = false;
+                    sseFinalizarNPC();
+                    if (ssePensandoSpan && ssePensandoSpan.parentNode) ssePensandoSpan.remove();
+                    const pollCur = document.getElementById('poll-cursor');
+                    if (pollCur) pollCur.remove();
+                    sseAiDiv = null; sseTextSpan = null; sseTextoAcumulado = '';
+                    ssePensandoSpan = null; ssePensandoTexto = '';
+                    carregarChat(true);
+                    break;
+
+                case 'npc_avatar_atualizado':
+                    avataresPorNPC[ev.nome] = ev.avatar;
+                    atualizarAvatarNPCNoDOM(ev.nome, ev.avatar);
+                    break;
+
+                case 'chat_limpo':
+                    if (!estaRecebendoStream) {
+                        carregarChat(true);
+                    }
+                    break;
+            }
+        }
+
+        async function executarPoll() {
+            if (estaRecebendoStream || rolando) return;
+            try {
+                const resp = await fetch('/api/poll?after_id=' + pollAfterId + '&_=' + Date.now());
+                const data = await resp.json();
+                const eventos = data.eventos || [];
+                for (const ev of eventos) {
+                    if (ev.id > pollAfterId) pollAfterId = ev.id;
+                    processarEventoPoll(ev);
+                }
+            } catch(e) {}
+        }
+
+        function iniciarPolling() {
+            // Poll normal a cada 3s, ou 500ms em modo rápido (enquanto Mestre responde)
+            function agendar() {
+                const intervalo = pollFastMode ? 500 : 3000;
+                pollTimer = setTimeout(async () => {
+                    await executarPoll();
+                    agendar();
+                }, intervalo);
+            }
+            agendar();
+        }
+
+        /* ---------- INICIALIZAÇÃO ---------- */
+        renderGotasFome();
+        carregarFichaServidor();
+        carregarRecursos();
+        carregarNotas();
+        carregarAvatarNPCs();
+
+        inicializarFicha();
+        carregarHistorico();
+
+        /* ---------- LÓGICA DO CHAT ---------- */
+        let chatMsgCount = 0;
+        let userScrolling = false;
+        let scrollTimeout;
+        let _turnoPendente = false;     // Mestre prestes a responder → poll acelera
+        let _chatPollInFlight = false;  // Trava: impede empilhar requisições
+        let _pollTimer = null;
+        let _aguardandoDesde = null;    // Quando entrou em espera de turno (para o botão prosseguir)
+
+        const chatBox = document.getElementById('chat-mensagens');
+
+        // Detecta quando o usuário está scrollando para cima manualmente
+        chatBox.addEventListener('scroll', function() {
+            clearTimeout(scrollTimeout);
+            userScrolling = true;
+
+            // Esconde a dica se ele voltar perto do fundo
+            const isNearBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 150;
+            if (isNearBottom) {
+                document.getElementById('chat-scroll-btn').classList.remove('visible');
+            }
+
+            scrollTimeout = setTimeout(() => {
+                userScrolling = false;
+            }, 1500);
+
+        }, { passive: true });
+
+        function scrollParaBaixoChat() {
+            chatBox.scrollTop = chatBox.scrollHeight;
+            document.getElementById('chat-scroll-btn').classList.remove('visible');
+            userScrolling = false;
+        }
+
+        // Formatador de texto do chat: **negrito**, *itálico*, e --- como divisor
+        function formatarTextoChat(texto) {
+            // Escape HTML básico
+            let t = texto
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            // Divisor narrativo
+            t = t.replace(/^[-—–]{3,}\s*$/gm, '<hr style="border:none;border-top:1px solid var(--borda-ouro);opacity:0.4;margin:14px 0;">');
+            // `código`/status — remove as crases e estiliza discreto
+            t = t.replace(/`([^`]+)`/g, '<span style="color:#9a8a6a;font-size:0.92em;">$1</span>');
+            // **negrito** — nomes, ênfase
+            t = t.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--ouro-claro);font-weight:600;">$1</strong>');
+            // *itálico* — ações, pensamentos
+            t = t.replace(/\*(.+?)\*/g, '<em style="color:#b8a576;font-style:italic;">$1</em>');
+            // Quebras de linha
+            t = t.replace(/\n/g, '<br>');
+            return t;
+        }
+
+        let _primeiroCarregamento = true;
+
+        async function abrirSessao() {
+            const btn = document.getElementById('btn-abrir-sessao');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.textContent = 'O MESTRE ESTÁ ABRINDO A CENA...';
+            try {
+                await fetch('/iniciar_sessao', { method: 'POST' });
+                // Retorna imediatamente — tokens chegam via polling (mestre_inicio → mestre_token → mestre_done)
+            } catch(e) {
+                btn.disabled = false;
+                btn.textContent = 'ABRIR SESSÃO';
+            }
+        }
+
+        async function carregarChat(forcarScroll = false) {
+            try {
+                const resp = await fetch('/api/chat');
+                const data = await resp.json();
+
+                const isNearBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 150;
+                let msgs = data.mensagens || [];
+
+                // Resíduo legado: chat com só a mensagem de saudação conta como vazio.
+                if (msgs.length === 1 && msgs[0].autor === 'Mestre (IA)'
+                    && msgs[0].texto.includes('preciso conhecer quem vocês são')) {
+                    msgs = [];
+                }
+
+                // Turno pendente = última mensagem é de jogador (Mestre vai responder)
+                // ou alguém já respondeu neste turno. Usado para acelerar o polling.
+                const ultimaEhJogador = msgs.length > 0 && msgs[msgs.length - 1].autor !== 'Mestre (IA)';
+                const alguemRespondeu = data.turno && data.turno.respondidos && data.turno.respondidos.length > 0;
+                _turnoPendente = ultimaEhJogador || alguemRespondeu;
+
+                const newCount = msgs.length;
+                const temNovaMensagem = newCount > chatMsgCount;
+                chatMsgCount = newCount;
+
+                chatBox.innerHTML = '';
+
+                // Chat vazio — mostra botão de abrir sessão
+                if (newCount === 0) {
+                    chatBox.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%;">
+                        <button id="btn-abrir-sessao" class="btn btn-secundario" style="font-size:0.9rem; letter-spacing:3px; padding:16px 32px;" onclick="abrirSessao()">
+                            ABRIR SESSÃO
+                        </button>
+                    </div>`;
+                    _primeiroCarregamento = false;
+                    return;
+                }
+
+                _primeiroCarregamento = false;
+
+                for (const msg of msgs) {
+                    const isMestre = msg.autor === "Mestre (IA)";
+                    if (isMestre) {
+                        // Divide a mensagem do Mestre em blocos separados por [NPC: Nome]
+                        const blocos = msg.texto.split(/(\[NPC:\s*[^\]]+\])/);
+                        let npcCorrente = null;
+                        for (const bloco of blocos) {
+                            const tagMatch = bloco.match(/^\[NPC:\s*([^\]]+)\]$/);
+                            if (tagMatch) {
+                                npcCorrente = tagMatch[1].trim();
+                            } else if (npcCorrente) {
+                                const textoNPC = bloco.trim();
+                                if (textoNPC) {
+                                    const npcEl = document.createElement('div');
+                                    npcEl.style.cssText = 'padding:12px 14px;border-radius:6px;background:#1a0a0a;border-left:4px solid var(--sangue);display:flex;gap:10px;align-items:flex-start;';
+                                    const avatarEl = criarAvatarNPCClicavel(npcCorrente);
+                                    const corpo = document.createElement('div');
+                                    corpo.style.cssText = 'flex:1;min-width:0;';
+                                    corpo.innerHTML = `<strong style="display:block;color:var(--sangue);font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:2px;margin-bottom:5px;">${npcCorrente.toUpperCase()}</strong><span style="color:#e0d0d0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;font-style:italic;">${formatarTextoChat(textoNPC)}</span>`;
+                                    npcEl.appendChild(avatarEl);
+                                    npcEl.appendChild(corpo);
+                                    chatBox.appendChild(npcEl);
+                                }
+                                npcCorrente = null;
+                            } else {
+                                const textoMestre = bloco.trim();
+                                if (textoMestre) {
+                                    const div = criarMsgDiv(msg.autor, formatarTextoChat(textoMestre), true, '');
+                                    chatBox.appendChild(div);
+                                }
+                            }
+                        }
+                    } else {
+                        const avatarUrl = await obterAvatarJogador(msg.autor);
+                        const div = criarMsgDiv(msg.autor, formatarTextoChat(msg.texto), false, avatarUrl);
+                        chatBox.appendChild(div);
+                    }
+                }
+
+                // Indicador persistente de "aguardando turno": renderizado a partir do
+                // estado do servidor. Some sozinho quando o Mestre fecha o turno (respondidos zera).
+                const meuNome = document.getElementById('jogador').value.trim();
+                const turno = data.turno || {};
+                const respondidos = turno.respondidos || [];
+                const aguardandoLista = turno.aguardando || [];
+
+                if (respondidos.includes(meuNome)) {
+                    if (_aguardandoDesde === null) _aguardandoDesde = Date.now();
+
+                    const respHtml = respondidos.map(j => `<span class="respondido">${j}</span>`).join(' ');
+                    const aguardHtml = aguardandoLista.map(j => `<span>${j}</span>`).join(' ');
+                    const aguardandoDiv = document.createElement('div');
+                    aguardandoDiv.className = 'aguardando-turno';
+
+                    let corpo;
+                    if (aguardandoLista.length > 0) {
+                        corpo = `Respondidos: ${respHtml}<br>Aguardando: ${aguardHtml}`;
+                    } else {
+                        corpo = `Respondidos: ${respHtml}<br>O Mestre está preparando a cena...`;
+                    }
+                    aguardandoDiv.innerHTML = `<strong>AGUARDANDO TURNO</strong><div class="aguardando-lista">${corpo}</div>`;
+
+                    // Após 45s esperando o outro jogador, oferece prosseguir.
+                    if (aguardandoLista.length > 0 && (Date.now() - _aguardandoDesde) > 45000) {
+                        const btnProsseguir = document.createElement('button');
+                        btnProsseguir.className = 'btn-prosseguir';
+                        btnProsseguir.textContent = '† PEDIR AO MESTRE PARA PROSSEGUIR';
+                        btnProsseguir.onclick = () => { _aguardandoDesde = null; prosseguirSemOutro(); };
+                        aguardandoDiv.appendChild(btnProsseguir);
+                    }
+                    chatBox.appendChild(aguardandoDiv);
+                } else {
+                    _aguardandoDesde = null;
+                }
+
+                // Scroll inteligente: só rola se forçado ou se usuário estava no fundo (não está lendo histórico)
+                const deveRolar = forcarScroll || (isNearBottom && !userScrolling);
+
+                if (deveRolar) {
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    document.getElementById('chat-scroll-btn').classList.remove('visible');
+                } else if (temNovaMensagem && !isNearBottom) {
+                    // Mostra botão de novas mensagens se há novas e ele não está vendo
+                    document.getElementById('chat-scroll-btn').classList.add('visible');
+                }
+            } catch (e) {
+                console.log("Erro ao carregar chat");
+            }
+        }
+
+        // Atalho: pedir ao Mestre para prosseguir sem o outro jogador
+        function prosseguirSemOutro() {
+            enviarMensagemChat(true);
+        }
+
+        async function enviarMensagemChat(forcar = false) {
+            const input = document.getElementById('chat-input');
+            const submitBtn = document.getElementById('chat-submit-btn');
+            const texto = input.value.trim();
+            if (!forcar && !texto) return;
+
+            input.disabled = true;
+            input.style.opacity = '0.5';
+            submitBtn.disabled = true;
+            input.blur();
+
+            // 1. Mostra mensagem do jogador imediatamente (exceto ao forçar — não há texto novo)
+            if (!forcar) {
+                const jogador = document.getElementById('jogador').value.trim().toUpperCase();
+                const avatarAtual = currentAvatarUrl;
+                const playerDiv = criarMsgDiv(jogador, formatarTextoChat(texto), false, avatarAtual);
+                playerDiv.style.animation = 'slideUp 0.3s ease-out';
+                chatBox.appendChild(playerDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                input.value = '';
+                input.style.height = 'auto';
+                autoExpandTextarea();
+            }
+
+            // 2. Indicador de digitação
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'mestre-typing';
+            typingDiv.innerHTML = '<span>MESTRE ESTÁ RESPONDENDO</span><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+            chatBox.appendChild(typingDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // 3. Fetch único com streaming
+            estaRecebendoStream = true;
+            try {
+                const resp = await fetch('/stream_chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(forcar ? { forcar: true } : { texto })
+                });
+
+                typingDiv.remove();
+
+                // Container de resposta do Mestre
+                const aiDiv = document.createElement('div');
+                aiDiv.style.cssText = 'padding:14px 16px;border-radius:6px;background:#2a1515;border-left:4px solid var(--sangue);';
+                aiDiv.innerHTML = '<strong style="display:block;color:var(--sangue);font-family:Cinzel,serif;font-size:0.85rem;letter-spacing:1px;margin-bottom:6px;">MESTRE (IA)</strong>';
+                // Área de "raciocínio" (o Mestre pensando antes de narrar)
+                const pensandoSpan = document.createElement('span');
+                pensandoSpan.style.cssText = 'color:#8a6a6a;font-family:Inter,sans-serif;font-size:13px;line-height:1.5;display:block;font-style:italic;opacity:0.75;max-height:90px;overflow:hidden;border-bottom:1px dashed #4a2a2a;padding-bottom:8px;margin-bottom:8px;';
+                let pensandoTexto = '';
+                aiDiv.appendChild(pensandoSpan);
+
+                const textSpan = document.createElement('span');
+                textSpan.style.cssText = 'color:#e0e0e0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;text-align:justify;';
+                const cursor = document.createElement('span');
+                cursor.className = 'cursor-streaming';
+                let textoAcumulado = '';
+                aiDiv.appendChild(textSpan);
+                aiDiv.appendChild(cursor);
+                chatBox.appendChild(aiDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                // Lê o stream
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                // Estado para detectar blocos de NPC no stream
+                let npcAtual = null;        // nome do NPC que está falando
+                let npcDiv = null;          // div do NPC atual
+                let npcTextSpan = null;     // span de texto do NPC atual
+                let npcTexto = '';          // texto acumulado do NPC
+
+                function finalizarBlocoNPC() {
+                    if (npcDiv) {
+                        // Remove cursor do NPC se existir
+                        const npcCursor = npcDiv.querySelector('.cursor-streaming');
+                        if (npcCursor) npcCursor.remove();
+                    }
+                    npcAtual = null; npcDiv = null; npcTextSpan = null; npcTexto = '';
+                }
+
+                function criarBlocoNPC(nome) {
+                    finalizarBlocoNPC();
+                    npcAtual = nome;
+                    npcTexto = '';
+
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding:12px 14px;border-radius:6px;background:#1a0a0a;border-left:4px solid var(--sangue);display:flex;gap:10px;align-items:flex-start;';
+
+                    const avatarEl = criarAvatarNPCClicavel(nome);
+                    const corpo = document.createElement('div');
+                    corpo.style.cssText = 'flex:1;min-width:0;';
+                    corpo.innerHTML = `<strong style="display:block;color:var(--sangue);font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:2px;margin-bottom:5px;">${nome.toUpperCase()}</strong>`;
+
+                    const span = document.createElement('span');
+                    span.style.cssText = 'color:#e0d0d0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;font-style:italic;';
+                    const cur = document.createElement('span');
+                    cur.className = 'cursor-streaming';
+                    corpo.appendChild(span);
+                    corpo.appendChild(cur);
+                    div.appendChild(avatarEl);
+                    div.appendChild(corpo);
+                    chatBox.appendChild(div);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+
+                    npcDiv = div;
+                    npcTextSpan = span;
+                }
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const parts = buffer.split('\n\n');
+                    buffer = parts.pop();
+                    for (const part of parts) {
+                        if (!part.startsWith('data: ')) continue;
+                        try {
+                            const data = JSON.parse(part.slice(6));
+
+                            if (data.status === 'aguardando') {
+                                // Feedback imediato; o bloco persistente é mantido pelo polling
+                                // a partir do estado do turno no servidor, até o Mestre responder.
+                                aiDiv.remove();
+                                finalizarBlocoNPC();
+                                _aguardandoDesde = Date.now();
+                                input.disabled = false;
+                                input.style.opacity = '1';
+                                submitBtn.disabled = false;
+                                input.focus();
+                                carregarChat(true);
+                            }
+
+                            if (data.pensando) {
+                                pensandoTexto += data.pensando;
+                                pensandoSpan.textContent = '🜍 ' + pensandoTexto;
+                                pensandoSpan.scrollTop = pensandoSpan.scrollHeight;
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            }
+
+                            if (data.token) {
+                                // Primeiro token real: remove a área de raciocínio.
+                                if (pensandoSpan.parentNode) pensandoSpan.remove();
+                                textoAcumulado += data.token;
+
+                                // Detecta tag [NPC: Nome] no texto acumulado
+                                const npcMatch = textoAcumulado.match(/\[NPC:\s*([^\]]+)\]\n?/);
+                                if (npcMatch) {
+                                    const nomeNPC = npcMatch[1].trim();
+                                    // Remove a tag do texto do Mestre e fecha bloco anterior
+                                    textoAcumulado = textoAcumulado.replace(npcMatch[0], '');
+                                    // Atualiza o balão do Mestre sem a tag
+                                    textSpan.innerHTML = formatarTextoChat(textoAcumulado);
+                                    // Cria balão do NPC
+                                    criarBlocoNPC(nomeNPC);
+                                } else if (npcAtual && npcTextSpan) {
+                                    // Acumula texto no balão do NPC
+                                    npcTexto += data.token;
+                                    // Verifica se o próximo token vai começar um novo bloco NPC
+                                    const proxNPC = npcTexto.match(/\[NPC:\s*([^\]]+)\]/);
+                                    if (proxNPC) {
+                                        npcTexto = npcTexto.replace(proxNPC[0], '');
+                                        npcTextSpan.innerHTML = formatarTextoChat(npcTexto);
+                                        criarBlocoNPC(proxNPC[1].trim());
+                                    } else {
+                                        npcTextSpan.innerHTML = formatarTextoChat(npcTexto);
+                                    }
+                                } else {
+                                    textSpan.innerHTML = formatarTextoChat(textoAcumulado);
+                                }
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            }
+
+                            if (data.done) {
+                                if (pensandoSpan.parentNode) pensandoSpan.remove();
+                                cursor.remove();
+                                finalizarBlocoNPC();
+                                estaRecebendoStream = false;
+                                input.disabled = false;
+                                input.style.opacity = '1';
+                                submitBtn.disabled = false;
+                                input.focus();
+                            }
+
+                            if (data.erro) {
+                                if (pensandoSpan.parentNode) pensandoSpan.remove();
+                                textSpan.textContent = '(Erro na Umbra. O Mestre perdeu a conexão.)';
+                                cursor.remove();
+                                finalizarBlocoNPC();
+                                estaRecebendoStream = false;
+                                input.disabled = false;
+                                input.style.opacity = '1';
+                                submitBtn.disabled = false;
+                            }
+                        } catch(e) {}
+                    }
+                }
+            } catch (e) {
+                typingDiv.remove();
+                estaRecebendoStream = false;
+                input.disabled = false;
+                input.style.opacity = '1';
+                submitBtn.disabled = false;
+                if (!forcar) input.value = texto;
+                input.focus();
+                alert('Erro ao enviar mensagem.');
+            }
+        }
+
+        /* ---------- AUTO-EXPAND TEXTAREA E ENTER BEHAVIOR ---------- */
+        const chatInput = document.getElementById('chat-input');
+
+        function autoExpandTextarea() {
+            chatInput.style.height = 'auto';
+            const novaAltura = Math.min(chatInput.scrollHeight, 150);
+            chatInput.style.height = novaAltura + 'px';
+        }
+
+        chatInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                enviarMensagemChat();
+            }
+        });
+
+        /* ---------- PRESENÇA ONLINE / DIGITANDO ---------- */
+        let _typingTimer = null;
+        let _estaTyping = false;
+
+        async function pingPresenca(typing = false) {
+            try {
+                const resp = await fetch('/presenca', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ typing })
+                });
+                const data = await resp.json();
+                renderizarPresenca(data.outros || {});
+            } catch(e) {}
+        }
+
+        function renderizarPresenca(outros) {
+            const bar = document.getElementById('presenca-bar');
+            const itens = Object.entries(outros).map(([nome, info]) => {
+                let classe = info.typing ? 'typing' : (info.online ? 'online' : '');
+                let dotClasse = info.typing ? 'typing' : (info.online ? 'online' : '');
+                let label = info.typing ? `${nome} está escrevendo` : (info.online ? `${nome} está aqui` : `${nome} ausente`);
+                return `<div class="presenca-item ${classe}"><span class="presenca-dot ${dotClasse}"></span>${label}</div>`;
+            }).join('');
+            bar.innerHTML = itens;
+        }
+
+        chatInput.addEventListener('input', function() {
+            autoExpandTextarea();
+
+            const len = this.value.length;
+            const contador = document.getElementById('contador-chars');
+            contador.textContent = `${len}/1190`;
+            contador.classList.remove('warning', 'danger');
+            if (len > 1100) contador.classList.add('danger');
+            else if (len > 900) contador.classList.add('warning');
+
+            if (!_estaTyping) {
+                _estaTyping = true;
+                pingPresenca(true);
+            }
+            clearTimeout(_typingTimer);
+            _typingTimer = setTimeout(() => {
+                _estaTyping = false;
+                pingPresenca(false);
+            }, 2500);
+        });
+
+        // Heartbeat a cada 8s
+        pingPresenca();
+        setInterval(() => pingPresenca(_estaTyping), 8000);
+
+        /* ---------- ENCERRAR SESSÃO ---------- */
+        async function abrirModalSessao() {
+            const ok = confirm(
+                "Encerrar a sessão?\n\n" +
+                "O Mestre vai gerar um resumo dos eventos desta noite, " +
+                "que você poderá editar antes de salvar no cânone.\n\n" +
+                "Faça isso apenas no final da partida."
+            );
+            if (!ok) return;
+
+            document.getElementById('modal-sessao').classList.add('ativo');
+            document.getElementById('modal-resumo-texto').value = '';
+            document.getElementById('btn-salvar-canon').disabled = true;
+            document.getElementById('modal-status').style.display = 'block';
+
+            try {
+                const resp = await fetch('/resumo_sessao', { method: 'POST' });
+                const data = await resp.json();
+                document.getElementById('modal-status').style.display = 'none';
+                if (data.erro) {
+                    document.getElementById('modal-resumo-texto').value = 'Erro ao gerar resumo: ' + data.erro;
+                } else {
+                    document.getElementById('modal-resumo-texto').value = data.resumo;
+                    document.getElementById('btn-salvar-canon').disabled = false;
+                }
+            } catch (e) {
+                document.getElementById('modal-status').style.display = 'none';
+                document.getElementById('modal-resumo-texto').value = 'Erro de conexão ao gerar resumo.';
+            }
+        }
+
+        function fecharModalSessao() {
+            document.getElementById('modal-sessao').classList.remove('ativo');
+        }
+
+        async function salvarResumoCanon() {
+            const conteudo = document.getElementById('modal-resumo-texto').value.trim();
+            if (!conteudo) return;
+
+            const btn = document.getElementById('btn-salvar-canon');
+            btn.disabled = true;
+            btn.textContent = 'SALVANDO...';
+
+            try {
+                const resp = await fetch('/canon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ conteudo })
+                });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    btn.textContent = 'SALVO! LIMPANDO CHAT...';
+                    // Limpa as mensagens do banco — o cânone já tem tudo.
+                    await fetch('/limpar_chat', { method: 'POST' });
+                    btn.textContent = 'SESSÃO ENCERRADA';
+                    setTimeout(() => {
+                        fecharModalSessao();
+                        carregarChat(true);
+                    }, 1500);
+                } else {
+                    btn.textContent = 'ERRO — tente novamente';
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                btn.textContent = 'ERRO — tente novamente';
+                btn.disabled = false;
+            }
+        }
+
+        // Carrega o histórico ao abrir com scroll ao fim.
+        carregarChat(true);
+
+        // Polling adaptativo: 2s quando há turno pendente, 8s parado.
+        // Trava _chatPollInFlight impede empilhar requisições no worker único.
+        function pollChatLoop() {
+            const intervalo = _turnoPendente ? 2000 : 8000;
+            _pollTimer = setTimeout(async () => {
+                // Pula se já há um poll em andamento ou se este cliente está recebendo o stream.
+                if (!_chatPollInFlight && !estaRecebendoStream) {
+                    _chatPollInFlight = true;
+                    try { await carregarChat(); }
+                    catch (e) {}
+                    finally { _chatPollInFlight = false; }
+                }
+                pollChatLoop();
+            }, intervalo);
+        }
+        pollChatLoop();
+
+        // Polling universal — funciona em qualquer hospedagem (PythonAnywhere, etc.)
+        iniciarPolling();
+
+    </script>
+</body>
+</html>

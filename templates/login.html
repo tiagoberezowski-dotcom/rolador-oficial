@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VTM — Varsóvia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ouro: #c9a96e;
+            --ouro-claro: #e0c594;
+            --sangue: #b3001b;
+            --bg: #0a0a0a;
+            --card: #111;
+            --borda-ouro: #8a7340;
+            --texto: #cbb890;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--texto);
+            font-family: 'Crimson Text', serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 520px;
+            border: 1px solid var(--borda-ouro);
+            border-radius: 10px;
+            padding: 40px 32px;
+            background: var(--card);
+            box-shadow: 0 0 40px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 28px;
+        }
+
+        .titulo {
+            font-family: 'Cinzel', serif;
+            color: var(--ouro);
+            font-size: 2rem;
+            letter-spacing: 6px;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(201,169,110,0.3);
+        }
+
+        .subtitulo {
+            font-family: 'Cinzel', serif;
+            color: #555;
+            font-size: 0.75rem;
+            letter-spacing: 3px;
+            text-align: center;
+            margin-top: -16px;
+        }
+
+        .divisor {
+            width: 100%;
+            border: none;
+            border-top: 1px solid var(--borda-ouro);
+            opacity: 0.3;
+        }
+
+        .instrucao {
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            color: #666;
+            text-align: center;
+        }
+
+        /* Cards de personagem */
+        .personagens {
+            display: flex;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .card-personagem {
+            flex: 1;
+            border: 1px solid var(--borda-ouro);
+            border-radius: 8px;
+            padding: 20px 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            background: #0d0d0d;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .card-personagem:hover {
+            border-color: var(--ouro);
+            background: #1a1508;
+        }
+
+        .card-personagem.selecionado {
+            border-color: var(--ouro-claro);
+            background: #1a1508;
+            box-shadow: 0 0 12px rgba(201,169,110,0.2);
+        }
+
+        .card-nome {
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            color: var(--ouro);
+            letter-spacing: 2px;
+        }
+
+        .card-sobrenome {
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            color: var(--ouro-claro);
+            letter-spacing: 1px;
+        }
+
+        .card-cla {
+            font-size: 0.8rem;
+            color: #666;
+            font-style: italic;
+            margin-top: 4px;
+        }
+
+        /* Campo de senha */
+        .campo-senha {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            display: none;
+        }
+
+        .campo-senha.visivel { display: flex; }
+
+        .campo-senha label {
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            color: #777;
+            text-align: center;
+        }
+
+        .campo-senha input[type="password"] {
+            width: 100%;
+            background: #000;
+            border: 1px solid var(--borda-ouro);
+            color: var(--ouro);
+            border-radius: 5px;
+            padding: 14px;
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            text-align: center;
+            letter-spacing: 4px;
+        }
+
+        .campo-senha input[type="password"]:focus {
+            outline: none;
+            border-color: var(--ouro-claro);
+        }
+
+        .btn-entrar {
+            width: 100%;
+            background: var(--sangue);
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 14px;
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-entrar:hover { background: #d4001f; }
+
+        .erro {
+            color: #ff5a5a;
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .rodape {
+            font-size: 0.8rem;
+            color: #333;
+            text-align: center;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="titulo">VTM V</div>
+        <div class="subtitulo">VARSÓVIA · 2026</div>
+        <hr class="divisor">
+
+        <div class="instrucao">Quem é você esta noite?</div>
+
+        <form method="POST" action="/login" style="width:100%; display:flex; flex-direction:column; gap:20px;" id="form-login">
+            <input type="hidden" name="personagem" id="input-personagem" value="{{ personagem_selecionado or '' }}">
+
+            <div class="personagens">
+                <div class="card-personagem {% if personagem_selecionado == 'Lior' %}selecionado{% endif %}"
+                     id="card-lior" onclick="selecionarPersonagem('Lior')">
+                    <div class="card-nome">Lior</div>
+                    <div class="card-sobrenome">Kovalenko</div>
+                    <div class="card-cla">Malkavian</div>
+                </div>
+                <div class="card-personagem {% if personagem_selecionado == 'Fryderyk' %}selecionado{% endif %}"
+                     id="card-fryderyk" onclick="selecionarPersonagem('Fryderyk')">
+                    <div class="card-nome">Fryderyk</div>
+                    <div class="card-sobrenome">Rozynski</div>
+                    <div class="card-cla">Toreador</div>
+                </div>
+            </div>
+
+            <div class="campo-senha {% if personagem_selecionado %}visivel{% endif %}" id="campo-senha">
+                <label id="label-senha">SENHA DE <span id="nome-label">{{ personagem_selecionado or '' }}</span></label>
+                <input type="password" name="senha" id="input-senha" autocomplete="current-password" autofocus>
+                {% if erro %}<div class="erro">{{ erro }}</div>{% endif %}
+                <button type="submit" class="btn-entrar">ENTRAR</button>
+            </div>
+        </form>
+
+        <hr class="divisor">
+        <div class="rodape">A corte não dorme. O Vístula corre escuro.</div>
+    </div>
+
+    <script>
+        function selecionarPersonagem(nome) {
+            document.getElementById('input-personagem').value = nome;
+            document.getElementById('nome-label').textContent = nome.toUpperCase();
+
+            document.getElementById('card-lior').classList.toggle('selecionado', nome === 'Lior');
+            document.getElementById('card-fryderyk').classList.toggle('selecionado', nome === 'Fryderyk');
+
+            const campo = document.getElementById('campo-senha');
+            campo.classList.add('visivel');
+            document.getElementById('input-senha').focus();
+        }
+
+        // Se voltou com erro, mantém o card selecionado
+        const personagemAtual = document.getElementById('input-personagem').value;
+        if (personagemAtual) selecionarPersonagem(personagemAtual);
+    </script>
+</body>
+</html>
