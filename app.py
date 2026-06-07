@@ -115,7 +115,8 @@ API_TIMEOUT = 120
 historico = []
 
 # --- Banco de Dados ---
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'banco.db')
+# No Render, usa /var/data (disco persistente). Localmente, usa a raiz do projeto.
+DB_PATH = '/var/data/banco.db' if os.path.exists('/var/data') else os.path.join(os.path.dirname(os.path.abspath(__file__)), 'banco.db')
 BACKUP_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backup_mensagens.json')
 
 _canon_lock = threading.Lock()
