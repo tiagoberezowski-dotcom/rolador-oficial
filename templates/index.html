@@ -2058,27 +2058,39 @@
                     <span style="color:#e0e0e0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;text-align:justify;">${textoLimpo}</span>
                 </div>`;
 
-            // Botão OUVIR (apenas para o Mestre) — closure captura o texto, sem embutir no HTML.
+            // Botão OUVIR + botão PAUSA (apenas para o Mestre)
             if (isMestre) {
                 const corpoDiv = div.querySelector('div');
+                const btnStyle = "margin-top:8px;background:none;border:1px solid var(--sangue);color:var(--sangue);border-radius:4px;padding:3px 10px;font-size:0.75rem;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px;opacity:0.8;";
+
                 const btnPlay = document.createElement('button');
                 btnPlay.textContent = '▶ OUVIR';
                 btnPlay.title = 'Ouvir narração';
-                btnPlay.style.cssText = "margin-top:8px;background:none;border:1px solid var(--sangue);color:var(--sangue);border-radius:4px;padding:3px 10px;font-size:0.75rem;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px;opacity:0.8;";
-                btnPlay.onclick = () => reproduzirTTS(btnPlay, textoTTS);
-                if (corpoDiv) corpoDiv.appendChild(btnPlay);
+                btnPlay.style.cssText = btnStyle;
+
+                const btnPause = document.createElement('button');
+                btnPause.textContent = '⏸';
+                btnPause.title = 'Pausar / Continuar';
+                btnPause.style.cssText = btnStyle + "margin-left:4px;display:none;";
+
+                btnPlay.onclick = () => reproduzirTTS(btnPlay, btnPause, textoTTS);
+                if (corpoDiv) {
+                    corpoDiv.appendChild(btnPlay);
+                    corpoDiv.appendChild(btnPause);
+                }
             }
             return div;
         }
 
         let _audioAtual = null;
 
-        async function reproduzirTTS(botao, textoComTags) {
+        async function reproduzirTTS(botao, btnPause, textoComTags) {
             if (_audioAtual) { _audioAtual.pause(); _audioAtual = null; }
             const textoPlano = textoComTags.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
             const labelOrig = botao.textContent;
             botao.textContent = '⏳ CARREGANDO...';
             botao.disabled = true;
+            btnPause.style.display = 'none';
             try {
                 const resp = await fetch('/tts', {
                     method: 'POST',
@@ -2093,11 +2105,36 @@
                 const blob = await resp.blob();
                 const url = URL.createObjectURL(blob);
                 _audioAtual = new Audio(url);
-                _audioAtual.onended = () => { botao.textContent = labelOrig; botao.disabled = false; URL.revokeObjectURL(url); };
+                _audioAtual.onended = () => {
+                    botao.textContent = labelOrig;
+                    botao.disabled = false;
+                    botao.onclick = () => reproduzirTTS(botao, btnPause, textoComTags);
+                    btnPause.style.display = 'none';
+                    URL.revokeObjectURL(url);
+                };
                 _audioAtual.play();
                 botao.textContent = '■ PARAR';
                 botao.disabled = false;
-                botao.onclick = () => { _audioAtual.pause(); _audioAtual = null; botao.textContent = labelOrig; botao.onclick = () => reproduzirTTS(botao, textoComTags); };
+                botao.onclick = () => {
+                    _audioAtual.pause();
+                    _audioAtual = null;
+                    botao.textContent = labelOrig;
+                    botao.onclick = () => reproduzirTTS(botao, btnPause, textoComTags);
+                    btnPause.style.display = 'none';
+                };
+
+                // Botão de pausa/continuar
+                btnPause.style.display = 'inline-block';
+                btnPause.textContent = '⏸';
+                btnPause.onclick = () => {
+                    if (_audioAtual.paused) {
+                        _audioAtual.play();
+                        btnPause.textContent = '⏸';
+                    } else {
+                        _audioAtual.pause();
+                        btnPause.textContent = '▶';
+                    }
+                };
             } catch(e) {
                 botao.textContent = '✗ ERRO';
                 setTimeout(() => { botao.textContent = labelOrig; botao.disabled = false; }, 3000);
