@@ -313,6 +313,19 @@ def init_db():
             'INSERT OR IGNORE INTO canon (id, conteudo) VALUES (1, ?)',
             (CANON_INICIAL,)
         )
+        con.execute('''CREATE TABLE IF NOT EXISTS xp (
+            jogador TEXT PRIMARY KEY,
+            disponivel INTEGER DEFAULT 0,
+            total_ganho INTEGER DEFAULT 0
+        )''')
+        con.execute('''CREATE TABLE IF NOT EXISTS xp_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            jogador TEXT NOT NULL,
+            tipo TEXT NOT NULL,
+            quantidade INTEGER NOT NULL,
+            descricao TEXT,
+            timestamp TEXT DEFAULT (datetime('now','localtime'))
+        )''')
         # Migration: adiciona coluna avatar à tabela fichas se ainda não existir
         try:
             con.execute('ALTER TABLE fichas ADD COLUMN avatar TEXT DEFAULT ""')
@@ -1888,6 +1901,124 @@ def save_ficha():
         )
         con.commit()
     return jsonify({'status': 'ok'})
+
+
+# --- Sistema de XP ---
+
+_INCLAN = {
+    'Lior':     {'Auspex', 'Dominate', 'Obfuscate'},
+    'Fryderyk': {'Auspex', 'Celerity', 'Presence'},
+}
+
+_ATTRIBUTES = {
+    'Strength', 'Dexterity', 'Stamina',
+    'Charisma', 'Manipulation', 'Composure',
+    'Intelligence', 'Wits', 'Resolve',
+}
+
+_DISCIPLINES = {
+    'Celerity', 'Fortitude', 'Potence', 'Blood Sorcery',
+    'Auspex', 'Dominate', 'Obfuscate', 'Oblivion',
+    'Animalism', 'Presence', 'Protean', 'Thin-Blood Alchemy',
+}
+
+
+def _custo_xp(jogador, stat):
+    if stat in _ATTRIBUTES:
+        return 5
+    if stat in _DISCIPLINES:
+        return 3 if stat in _INCLAN.get(jogador, set()) else 5
+    return 3  # Skills
+
+
+@app.route('/xp', methods=['GET'])
+@login_required
+def get_xp():
+    jogador = session['jogador']
+    with _db() as con:
+        row = con.execute('SELECT disponivel, total_ganho FROM xp WHERE jogador = ?', (jogador,)).fetchone()
+    if not row:
+        return jsonify({'disponivel': 0, 'total_ganho': 0})
+    return jsonify({'disponivel': row[0], 'total_ganho': row[1]})
+
+
+@app.route('/xp/conceder', methods=['POST'])
+def xp_conceder():
+    dados = request.get_json(silent=True) or {}
+    senha = dados.get('senha', '')
+    senha_mestre = os.environ.get('SENHA_MESTRE', '')
+    if not senha_mestre or senha != senha_mestre:
+        return jsonify({'erro': 'Não autorizado'}), 403
+    jogador = dados.get('jogador', '').strip()
+    quantidade = int(dados.get('quantidade', 0))
+    descricao = dados.get('descricao', '').strip()
+    if jogador not in ('Lior', 'Fryderyk') or quantidade <= 0:
+        return jsonify({'erro': 'Dados inválidos'}), 400
+    with _db() as con:
+        con.execute(
+            '''INSERT INTO xp (jogador, disponivel, total_ganho) VALUES (?, ?, ?)
+               ON CONFLICT(jogador) DO UPDATE SET
+               disponivel = disponivel + excluded.disponivel,
+               total_ganho = total_ganho + excluded.total_ganho''',
+            (jogador, quantidade, quantidade)
+        )
+        con.execute(
+            'INSERT INTO xp_log (jogador, tipo, quantidade, descricao) VALUES (?, ?, ?, ?)',
+            (jogador, 'ganho', quantidade, descricao)
+        )
+        con.commit()
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/xp/comprar', methods=['POST'])
+@login_required
+def xp_comprar():
+    dados = request.get_json(silent=True) or {}
+    jogador = session['jogador']
+    stat = dados.get('stat', '').strip()
+    nivel_atual = int(dados.get('nivel_atual', 0))
+    if not stat or nivel_atual >= 5:
+        return jsonify({'erro': 'Dados inválidos'}), 400
+    custo = _custo_xp(jogador, stat)
+    with _db() as con:
+        row = con.execute('SELECT disponivel FROM xp WHERE jogador = ?', (jogador,)).fetchone()
+        disponivel = row[0] if row else 0
+        if disponivel < custo:
+            return jsonify({'erro': 'XP insuficiente', 'disponivel': disponivel, 'custo': custo}), 400
+        # Atualiza a ficha
+        ficha_row = con.execute('SELECT dados FROM fichas WHERE jogador = ?', (jogador,)).fetchone()
+        ficha = json.loads(ficha_row[0]) if ficha_row else {}
+        stats = ficha.get('stats', {})
+        stats[stat] = nivel_atual + 1
+        ficha['stats'] = stats
+        con.execute(
+            '''INSERT INTO fichas (jogador, dados) VALUES (?, ?)
+               ON CONFLICT(jogador) DO UPDATE SET dados=excluded.dados,
+               atualizado_em=datetime('now','localtime')''',
+            (jogador, json.dumps(ficha))
+        )
+        # Desconta XP
+        con.execute('UPDATE xp SET disponivel = disponivel - ? WHERE jogador = ?', (custo, jogador))
+        # Log
+        descricao = f'{stat} {nivel_atual}→{nivel_atual + 1}'
+        con.execute(
+            'INSERT INTO xp_log (jogador, tipo, quantidade, descricao) VALUES (?, ?, ?, ?)',
+            (jogador, 'gasto', custo, descricao)
+        )
+        con.commit()
+    return jsonify({'status': 'ok', 'novo_nivel': nivel_atual + 1, 'custo': custo})
+
+
+@app.route('/xp/log', methods=['GET'])
+@login_required
+def xp_log():
+    jogador = session['jogador']
+    with _db() as con:
+        rows = con.execute(
+            'SELECT tipo, quantidade, descricao, timestamp FROM xp_log WHERE jogador = ? ORDER BY id DESC LIMIT 30',
+            (jogador,)
+        ).fetchall()
+    return jsonify({'log': [{'tipo': r[0], 'quantidade': r[1], 'descricao': r[2], 'timestamp': r[3]} for r in rows]})
 
 
 @app.route('/historico')

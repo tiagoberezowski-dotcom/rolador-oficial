@@ -309,6 +309,14 @@
         .poder-row.tem-formula:not(.bloqueado) { cursor: pointer; }
         .poder-row.tem-formula:not(.bloqueado):hover { background: #130f06; }
         .poder-row.bloqueado { opacity: 0.25; pointer-events: none; }
+        .disc-header.sem-disc { opacity: 0.45; }
+        .disc-header.sem-disc .disc-nome { color: #555; }
+        .disc-adquirir { font-size: 0.7rem; color: #666; border: 1px solid #333; border-radius: 3px; padding: 2px 6px; cursor: pointer; background: transparent; margin-left: auto; white-space: nowrap; }
+        .disc-adquirir:hover { border-color: var(--ouro); color: var(--ouro); }
+        .xp-counter { display: flex; gap: 16px; align-items: center; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 2px; color: #888; padding: 6px 0; }
+        .xp-disponivel { color: var(--ouro); font-size: 0.9rem; }
+        .dot-compravel { cursor: pointer; }
+        .dot-compravel:hover { border-color: var(--ouro) !important; background: #2a2511 !important; }
 
         .poder-nome {
             font-family: 'Crimson Text', serif; font-size: 0.88rem; color: #aaa; flex: 1;
@@ -733,6 +741,51 @@
             </div>
         </div>
 
+        <!-- Modal Compra XP -->
+        <div class="modal-overlay" id="modal-xp-compra">
+            <div class="modal-box" style="max-width:380px; gap:14px;">
+                <div class="modal-titulo">COMPRAR PONTO</div>
+                <div id="xp-compra-info" style="font-family:'Crimson Text',serif; color:#aaa; font-size:1rem; text-align:center; line-height:1.7;"></div>
+                <div class="modal-btns">
+                    <button class="btn btn-primario" id="btn-xp-confirmar" onclick="confirmarCompraXP()">CONFIRMAR</button>
+                    <button class="btn btn-secundario" onclick="fecharModalXP()">CANCELAR</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Conceder XP (Mestre) -->
+        <div class="modal-overlay" id="modal-xp-mestre">
+            <div class="modal-box" style="max-width:400px; gap:14px;">
+                <div class="modal-titulo">CONCEDER XP</div>
+                <div style="display:flex; gap:10px; flex-direction:column;">
+                    <div>
+                        <span class="label-pequena">JOGADOR</span>
+                        <select id="xp-m-jogador" style="width:100%; background:#000; border:1px solid var(--borda-ouro); color:var(--ouro-claro); padding:10px; border-radius:5px; font-family:'Cinzel',serif;">
+                            <option value="Lior">Lior</option>
+                            <option value="Fryderyk">Fryderyk</option>
+                        </select>
+                    </div>
+                    <div>
+                        <span class="label-pequena">QUANTIDADE DE XP</span>
+                        <input type="number" id="xp-m-quantidade" min="1" max="50" value="3" style="width:100%; background:#000; border:1px solid var(--borda-ouro); color:var(--ouro-claro); padding:10px; border-radius:5px; font-family:'Cinzel',serif; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <span class="label-pequena">DESCRIÇÃO</span>
+                        <input type="text" id="xp-m-descricao" placeholder="ex: Sessão 4" style="width:100%; background:#000; border:1px solid var(--borda-ouro); color:var(--ouro-claro); padding:10px; border-radius:5px; font-family:'Cinzel',serif; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <span class="label-pequena">SENHA DO MESTRE</span>
+                        <input type="password" id="xp-m-senha" style="width:100%; background:#000; border:1px solid var(--borda-ouro); color:var(--ouro-claro); padding:10px; border-radius:5px; font-family:'Cinzel',serif; box-sizing:border-box;">
+                    </div>
+                </div>
+                <div id="xp-m-erro" style="color:#c00; font-size:0.8rem; text-align:center; display:none;"></div>
+                <div class="modal-btns">
+                    <button class="btn btn-primario" onclick="enviarXPMestre()">CONCEDER</button>
+                    <button class="btn btn-secundario" onclick="document.getElementById('modal-xp-mestre').classList.remove('ativo')">CANCELAR</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Painel de Recursos -->
         <div class="recursos-panel">
             <div class="recurso-item">
@@ -817,6 +870,15 @@
                 <div style="flex: 1;">
                     <span class="label-pequena">DADOS (SOMA)</span>
                     <input type="number" id="num-dados" min="1" max="20" inputmode="numeric" placeholder="0">
+                </div>
+                <div style="flex: 1.2;">
+                    <span class="label-pequena">EXPERIENCE</span>
+                    <div style="display:flex; gap:6px; align-items:stretch;">
+                        <div class="xp-counter" id="xp-counter" style="padding:12px; background:#000; border:1px solid var(--borda-ouro); border-radius:5px; justify-content:center; flex:1;">
+                            <span class="xp-disponivel" id="xp-disp">0 XP</span>
+                        </div>
+                        <button onclick="document.getElementById('modal-xp-mestre').classList.add('ativo')" style="background:transparent; border:1px solid #333; color:#555; border-radius:5px; padding:0 10px; cursor:pointer; font-size:0.75rem; font-family:'Cinzel',serif; letter-spacing:1px;" title="Conceder XP (Mestre)">+XP</button>
+                    </div>
                 </div>
             </div>
             <div class="btns-acao">
@@ -1053,7 +1115,10 @@
                             wrap.className = 'disc-wrap';
 
                             const header = document.createElement('div');
-                            header.className = 'disc-header' + (disciplinasExpandidas.has(stat) ? ' expandido' : '');
+                            let valDisc = fichaViva[stat] || 0;
+                            header.className = 'disc-header'
+                                + (disciplinasExpandidas.has(stat) ? ' expandido' : '')
+                                + (valDisc === 0 ? ' sem-disc' : '');
                             header.id = 'disc-header-' + stat;
 
                             const nomeDisc = document.createElement('span');
@@ -1062,11 +1127,15 @@
 
                             const dotsDisc = document.createElement('div');
                             dotsDisc.className = 'stat-dots';
-                            let valDisc = fichaViva[stat] || 0;
+                            dotsDisc.id = 'dots-disc-' + stat;
                             for (let i = 0; i < 5; i++) {
                                 const dot = document.createElement('div');
                                 dot.className = 'dot' + (i < valDisc ? ' fill' : '');
-                                dot.onclick = (e) => { e.stopPropagation(); alterarPontoFicha(stat, i, dotsDisc); };
+                                if (i === valDisc && valDisc < 5) {
+                                    dot.classList.add('dot-compravel');
+                                    dot.title = `Comprar ${stat} ${valDisc}→${valDisc+1}`;
+                                    dot.onclick = (e) => { e.stopPropagation(); abrirModalCompraXP(stat, valDisc); };
+                                }
                                 dotsDisc.appendChild(dot);
                             }
 
@@ -1076,8 +1145,15 @@
 
                             header.appendChild(nomeDisc);
                             header.appendChild(dotsDisc);
+                            if (valDisc === 0) {
+                                const btnAdq = document.createElement('button');
+                                btnAdq.className = 'disc-adquirir';
+                                btnAdq.textContent = 'ADQUIRIR';
+                                btnAdq.onclick = (e) => { e.stopPropagation(); abrirModalCompraXP(stat, 0); };
+                                header.appendChild(btnAdq);
+                            }
                             header.appendChild(toggle);
-                            header.onclick = () => toggleDiscExpandir(stat);
+                            header.onclick = () => { if (valDisc > 0) toggleDiscExpandir(stat); };
 
                             // Painel de poderes
                             const poderesPanel = document.createElement('div');
@@ -1140,11 +1216,16 @@
 
                             const dotsDiv = document.createElement('div');
                             dotsDiv.className = 'stat-dots';
+                            dotsDiv.id = 'dots-stat-' + stat;
                             let valorSalvo = fichaViva[stat] || 0;
                             for (let i = 0; i < 5; i++) {
                                 const dot = document.createElement('div');
                                 dot.className = 'dot' + (i < valorSalvo ? ' fill' : '');
-                                dot.onclick = (e) => { e.stopPropagation(); alterarPontoFicha(stat, i, dotsDiv); };
+                                if (i === valorSalvo && valorSalvo < 5) {
+                                    dot.classList.add('dot-compravel');
+                                    dot.title = `Comprar ${stat} ${valorSalvo}→${valorSalvo+1}`;
+                                    dot.onclick = (e) => { e.stopPropagation(); abrirModalCompraXP(stat, valorSalvo); };
+                                }
                                 dotsDiv.appendChild(dot);
                             }
 
@@ -2665,12 +2746,114 @@
             agendar();
         }
 
+        /* ---------- SISTEMA DE XP ---------- */
+        let xpDisponivel = 0;
+        let _xpCompra = null; // { stat, nivelAtual, custo }
+
+        const _INCLAN = {
+            'Lior':     new Set(['Auspex', 'Dominate', 'Obfuscate']),
+            'Fryderyk': new Set(['Auspex', 'Celerity', 'Presence']),
+        };
+        const _ATRIBUTOS = new Set(['Strength','Dexterity','Stamina','Charisma','Manipulation','Composure','Intelligence','Wits','Resolve']);
+        const _DISCIPLINAS = new Set(['Celerity','Fortitude','Potence','Blood Sorcery','Auspex','Dominate','Obfuscate','Oblivion','Animalism','Presence','Protean','Thin-Blood Alchemy']);
+
+        function custoXP(stat) {
+            const jogador = document.getElementById('jogador').value.trim();
+            if (_ATRIBUTOS.has(stat)) return 5;
+            if (_DISCIPLINAS.has(stat)) return (_INCLAN[jogador] && _INCLAN[jogador].has(stat)) ? 3 : 5;
+            return 3;
+        }
+
+        async function carregarXP() {
+            try {
+                const r = await fetch('/xp');
+                const d = await r.json();
+                xpDisponivel = d.disponivel || 0;
+                document.getElementById('xp-disp').textContent = xpDisponivel + ' XP';
+            } catch(e) {}
+        }
+
+        function abrirModalCompraXP(stat, nivelAtual) {
+            const custo = custoXP(stat);
+            _xpCompra = { stat, nivelAtual, custo };
+            const info = document.getElementById('xp-compra-info');
+            info.innerHTML = `<b style="color:var(--ouro-claro); font-family:'Cinzel',serif;">${stat.toUpperCase()}</b><br>
+                ${nivelAtual} → ${nivelAtual + 1}<br><br>
+                Custo: <b style="color:var(--ouro);">${custo} XP</b><br>
+                Disponível: <b style="color:${xpDisponivel >= custo ? 'var(--ouro)' : '#c00'};">${xpDisponivel} XP</b>`;
+            document.getElementById('btn-xp-confirmar').disabled = xpDisponivel < custo;
+            document.getElementById('modal-xp-compra').classList.add('ativo');
+        }
+
+        function fecharModalXP() {
+            document.getElementById('modal-xp-compra').classList.remove('ativo');
+            _xpCompra = null;
+        }
+
+        async function confirmarCompraXP() {
+            if (!_xpCompra) return;
+            const btn = document.getElementById('btn-xp-confirmar');
+            btn.disabled = true;
+            btn.textContent = '...';
+            try {
+                const r = await fetch('/xp/comprar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stat: _xpCompra.stat, nivel_atual: _xpCompra.nivelAtual })
+                });
+                const d = await r.json();
+                if (d.status === 'ok') {
+                    fichaViva[_xpCompra.stat] = d.novo_nivel;
+                    localStorage.setItem('vtm_ficha_viva', JSON.stringify(fichaViva));
+                    fecharModalXP();
+                    await carregarXP();
+                    inicializarFicha();
+                } else {
+                    const info = document.getElementById('xp-compra-info');
+                    info.innerHTML += `<br><span style="color:#c00;">${d.erro || 'Erro'}</span>`;
+                    btn.disabled = false;
+                    btn.textContent = 'CONFIRMAR';
+                }
+            } catch(e) {
+                btn.disabled = false;
+                btn.textContent = 'CONFIRMAR';
+            }
+        }
+
+        async function enviarXPMestre() {
+            const jogadorAlvo = document.getElementById('xp-m-jogador').value;
+            const quantidade = parseInt(document.getElementById('xp-m-quantidade').value);
+            const descricao = document.getElementById('xp-m-descricao').value;
+            const senha = document.getElementById('xp-m-senha').value;
+            const erroEl = document.getElementById('xp-m-erro');
+            erroEl.style.display = 'none';
+            try {
+                const r = await fetch('/xp/conceder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jogador: jogadorAlvo, quantidade, descricao, senha })
+                });
+                const d = await r.json();
+                if (d.status === 'ok') {
+                    document.getElementById('modal-xp-mestre').classList.remove('ativo');
+                    await carregarXP();
+                } else {
+                    erroEl.textContent = d.erro || 'Erro';
+                    erroEl.style.display = 'block';
+                }
+            } catch(e) {
+                erroEl.textContent = 'Erro de conexão';
+                erroEl.style.display = 'block';
+            }
+        }
+
         /* ---------- INICIALIZAÇÃO ---------- */
         renderGotasFome();
         carregarFichaServidor();
         carregarRecursos();
         carregarNotas();
         carregarAvatarNPCs();
+        carregarXP();
 
         inicializarFicha();
         carregarHistorico();
