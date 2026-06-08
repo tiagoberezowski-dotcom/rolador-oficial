@@ -80,6 +80,31 @@ def login_required(f):
     return decorated
 
 
+def _get_pin(jogador: str) -> str | None:
+    """Retorna o PIN do jogador ou None se ainda não cadastrado."""
+    with _db() as con:
+        row = con.execute('SELECT pin FROM pins WHERE jogador = ?', (jogador,)).fetchone()
+    return row[0] if row else None
+
+
+def _set_pin(jogador: str, pin: str):
+    with _db() as con:
+        con.execute(
+            'INSERT INTO pins (jogador, pin) VALUES (?, ?) ON CONFLICT(jogador) DO UPDATE SET pin=excluded.pin',
+            (jogador, pin)
+        )
+        con.commit()
+
+
+@app.route('/login/tem-pin')
+def login_tem_pin():
+    """Retorna se o personagem já tem PIN cadastrado (usado pelo frontend)."""
+    personagem = request.args.get('personagem', '').strip()
+    if personagem not in ('Lior', 'Fryderyk'):
+        return jsonify({'tem_pin': False})
+    return jsonify({'tem_pin': _get_pin(personagem) is not None})
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     erro = None
@@ -97,25 +122,43 @@ def login():
 
         personagem = request.form.get('personagem', '').strip()
         pin = request.form.get('senha', '').strip()
+        modo = request.form.get('modo', 'entrar')  # 'entrar' ou 'criar'
 
-        pins_map = {
-            'Lior':     os.environ.get('PIN_LIOR', ''),
-            'Fryderyk': os.environ.get('PIN_FRYDERYK', ''),
-        }
+        if personagem not in ('Lior', 'Fryderyk'):
+            return render_template('login.html', erro='Personagem inválido.',
+                personagem_selecionado=None, bloqueado_segundos=0)
 
-        pin_correto = pins_map.get(personagem, '')
-        # Comparação em tempo constante para evitar timing attack
-        if personagem in pins_map and pin_correto and hmac.compare_digest(pin, pin_correto):
-            _limpar_falhas(ip)
-            session.permanent = True
-            session['jogador'] = personagem
-            return redirect(url_for('index'))
+        pin_salvo = _get_pin(personagem)
 
-        _registrar_falha(ip)
-        _, restante = _checar_rate_limit(ip)
+        if modo == 'criar':
+            # Primeiro acesso: cadastra o PIN
+            if pin_salvo:
+                # Já tem PIN — não permite sobrescrever por este fluxo
+                erro = 'PIN já definido. Use o PIN existente.'
+            elif not pin.isdigit() or len(pin) != 4:
+                erro = 'PIN inválido.'
+            else:
+                _set_pin(personagem, pin)
+                _limpar_falhas(ip)
+                session.permanent = True
+                session['jogador'] = personagem
+                return redirect(url_for('index'))
+        else:
+            # Login normal
+            if not pin_salvo:
+                erro = 'Nenhum PIN cadastrado.'
+            elif hmac.compare_digest(pin, pin_salvo):
+                _limpar_falhas(ip)
+                session.permanent = True
+                session['jogador'] = personagem
+                return redirect(url_for('index'))
+            else:
+                _registrar_falha(ip)
+                _, restante = _checar_rate_limit(ip)
+                bloqueado_segundos = restante
+                erro = 'PIN incorreto.'
+
         personagem_selecionado = personagem
-        erro = 'PIN incorreto.'
-        bloqueado_segundos = restante
 
     return render_template('login.html',
         erro=erro,
@@ -414,6 +457,11 @@ def init_db():
             nivel TEXT,
             status TEXT DEFAULT 'ativo',
             criada_em TEXT DEFAULT (datetime('now','localtime'))
+        )''')
+        con.execute('''CREATE TABLE IF NOT EXISTS pins (
+            jogador TEXT PRIMARY KEY,
+            pin TEXT NOT NULL,
+            criado_em TEXT DEFAULT (datetime('now','localtime'))
         )''')
         # Migration: adiciona coluna avatar à tabela fichas se ainda não existir
         try:
