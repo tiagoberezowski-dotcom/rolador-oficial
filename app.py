@@ -463,6 +463,11 @@ def init_db():
             pin TEXT NOT NULL,
             criado_em TEXT DEFAULT (datetime('now','localtime'))
         )''')
+        # Migration: coluna hunger na tabela recursos
+        try:
+            con.execute('ALTER TABLE recursos ADD COLUMN hunger INTEGER DEFAULT 0')
+        except sqlite3.OperationalError:
+            pass
         # Migration: adiciona coluna avatar à tabela fichas se ainda não existir
         try:
             con.execute('ALTER TABLE fichas ADD COLUMN avatar TEXT DEFAULT ""')
@@ -1179,6 +1184,18 @@ Regras:
 - Pode conceder para um ou ambos os jogadores
 - A tag é processada automaticamente — não mencione XP no texto narrativo
 
+### I.B. CONTROLE DE FOME
+
+A Fome dos personagens é **controlada exclusivamente por você** — os jogadores não podem alterá-la manualmente. Use esta tag sempre que a Fome mudar na ficção (após alimentação, uso de poder com Rouse Check narrativo, privação):
+
+`[FOME: Lior=2, Fryderyk=4]`
+
+Regras:
+- Valores de 0 (saciado) a 5 (faminto)
+- Use sempre que a narrativa mudar a Fome de qualquer personagem
+- Pode atualizar um ou ambos
+- A tag é processada automaticamente — a ficha do jogador é atualizada em tempo real
+
 ---
 
 ### J. TAGS DE MUNDO PERSISTENTE — MEMÓRIA REAL DO NARRADOR
@@ -1430,8 +1447,9 @@ def stream_chat():
                 else:
                     broadcast({"tipo": "mestre_token", "delta": novo})
 
-            # Processa tags de controle (XP e mundo persistente) antes de salvar.
+            # Processa tags de controle (XP, Fome e mundo persistente) antes de salvar.
             full_response, xp_concedidos = _processar_xp_tag(full_response)
+            full_response, fome_atualizada = _processar_fome_tag(full_response)
             full_response, mundo_mudou = _processar_tags_mundo(full_response)
 
             # Persiste e encerra o turno.
@@ -1449,6 +1467,8 @@ def stream_chat():
 
             if xp_concedidos:
                 broadcast({"tipo": "xp_atualizado", "concedidos": xp_concedidos})
+            if fome_atualizada:
+                broadcast({"tipo": "fome_atualizada", "valores": fome_atualizada})
             if mundo_mudou:
                 broadcast({"tipo": "mundo_atualizado"})
 
@@ -1459,6 +1479,7 @@ def stream_chat():
             if full_response and not salvou:
                 # Limpa tags de controle incompletas antes de salvar o parcial.
                 full_response, _ = _processar_xp_tag(full_response)
+                full_response, _ = _processar_fome_tag(full_response)
                 full_response, _ = _processar_tags_mundo(full_response)
                 parcial = full_response + "\n\n*(…transmissão interrompida)*"
                 with _chat_lock:
@@ -1775,7 +1796,7 @@ def get_recursos():
     jogador = session['jogador']
     with _db() as con:
         row = con.execute(
-            'SELECT willpower, health, humanity FROM recursos WHERE jogador = ?',
+            'SELECT willpower, health, humanity, COALESCE(hunger, 0) FROM recursos WHERE jogador = ?',
             (jogador,)
         ).fetchone()
 
@@ -1783,14 +1804,15 @@ def get_recursos():
         return jsonify({
             'willpower': row[0],
             'health': row[1],
-            'humanity': row[2]
+            'humanity': row[2],
+            'hunger': row[3],
         })
     else:
-        # Retorna valores padrão se não existir
         return jsonify({
             'willpower': 5,
             'health': 3,
-            'humanity': 7
+            'humanity': 7,
+            'hunger': 0,
         })
 
 
@@ -1799,18 +1821,27 @@ def get_recursos():
 def update_recursos():
     dados = request.get_json(silent=True) or {}
     jogador = session['jogador']
-    wp = _clamp_recurso('willpower', dados.get('willpower'), 5)
-    hp = _clamp_recurso('health', dados.get('health'), 3)
-    hum = _clamp_recurso('humanity', dados.get('humanity'), 7)
+    wp  = _clamp_recurso('willpower', dados.get('willpower'), 5)
+    hp  = _clamp_recurso('health',    dados.get('health'),    3)
+    hum = _clamp_recurso('humanity',  dados.get('humanity'),  7)
+    hun = max(0, min(5, int(dados['hunger']))) if 'hunger' in dados else None
     with _db() as con:
-        con.execute('''INSERT INTO recursos (jogador, willpower, health, humanity)
-                       VALUES (?, ?, ?, ?)
-                       ON CONFLICT(jogador) DO UPDATE SET
-                       willpower=excluded.willpower,
-                       health=excluded.health,
-                       humanity=excluded.humanity,
-                       atualizado_em=datetime('now','localtime')''',
-                    (jogador, wp, hp, hum))
+        if hun is not None:
+            con.execute('''INSERT INTO recursos (jogador, willpower, health, humanity, hunger)
+                           VALUES (?, ?, ?, ?, ?)
+                           ON CONFLICT(jogador) DO UPDATE SET
+                           willpower=excluded.willpower, health=excluded.health,
+                           humanity=excluded.humanity, hunger=excluded.hunger,
+                           atualizado_em=datetime('now','localtime')''',
+                        (jogador, wp, hp, hum, hun))
+        else:
+            con.execute('''INSERT INTO recursos (jogador, willpower, health, humanity)
+                           VALUES (?, ?, ?, ?)
+                           ON CONFLICT(jogador) DO UPDATE SET
+                           willpower=excluded.willpower, health=excluded.health,
+                           humanity=excluded.humanity,
+                           atualizado_em=datetime('now','localtime')''',
+                        (jogador, wp, hp, hum))
         con.commit()
     return jsonify({'status': 'ok'})
 
@@ -1966,9 +1997,16 @@ def iniciar_sessao():
                     continue
                 full_response += delta
                 broadcast({"tipo": "mestre_token", "delta": delta})
+            full_response, xp_c = _processar_xp_tag(full_response)
+            full_response, fome_a = _processar_fome_tag(full_response)
+            full_response, _ = _processar_tags_mundo(full_response)
             with _chat_lock:
                 hora = salvar_mensagem_db("Mestre (IA)", full_response)
                 mensagens_chat.append({"autor": "Mestre (IA)", "texto": full_response, "hora": hora})
+            if xp_c:
+                broadcast({"tipo": "xp_atualizado", "concedidos": xp_c})
+            if fome_a:
+                broadcast({"tipo": "fome_atualizada", "valores": fome_a})
         except Exception as e:
             app.logger.error("Erro em iniciar_sessao: %s", e)
             if full_response:
@@ -2195,8 +2233,37 @@ def _processar_xp_tag(texto):
     return texto_limpo, concedidos
 
 
+def _processar_fome_tag(texto):
+    """Detecta [FOME: Lior=N, Fryderyk=N] e atualiza hunger no banco."""
+    match = re.search(r'\[FOME:\s*([^\]]+)\]', texto, re.IGNORECASE)
+    if not match:
+        return texto, {}
+    conteudo = match.group(1)
+    atualizados = {}
+    for parte in conteudo.split(','):
+        parte = parte.strip()
+        if '=' in parte:
+            nome, valor = parte.split('=', 1)
+            nome = nome.strip()
+            try:
+                qtd = max(0, min(5, int(valor.strip())))
+            except ValueError:
+                continue
+            if nome in ('Lior', 'Fryderyk'):
+                with _db() as con:
+                    con.execute(
+                        '''INSERT INTO recursos (jogador, hunger) VALUES (?, ?)
+                           ON CONFLICT(jogador) DO UPDATE SET hunger=excluded.hunger''',
+                        (nome, qtd)
+                    )
+                    con.commit()
+                atualizados[nome] = qtd
+    texto_limpo = re.sub(r'\s*\[FOME:[^\]]+\]', '', texto).rstrip()
+    return texto_limpo, atualizados
+
+
 # Prefixos de tags de controle — usados para suprimir do stream ao vivo e limpar o texto salvo.
-_CONTROL_RE = re.compile(r'\[(?:XP|RELOGIO|SEMENTE|COLHEU|PRESTACAO)\b', re.IGNORECASE)
+_CONTROL_RE = re.compile(r'\[(?:XP|FOME|RELOGIO|SEMENTE|COLHEU|PRESTACAO)\b', re.IGNORECASE)
 
 
 def _processar_tags_mundo(texto):

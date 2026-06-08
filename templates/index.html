@@ -192,13 +192,13 @@
 
         /* ----- Medidor de Fome (nas gotas do header) ----- */
         .gotas { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 2px; }
-        .gota-fome { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+        .gota-fome { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; cursor: default; }
         .gota-fome i {
             width: 18px; height: 18px; display: block; border-radius: 50% 50% 50% 0; transform: rotate(45deg);
             border: 2px solid #8a3333; background: transparent; transition: 0.2s;
         }
         .gota-fome.cheia i { background: var(--fome); border-color: var(--fome); box-shadow: 0 0 8px rgba(179, 0, 27, 0.6); }
-        .gota-fome:hover i { border-color: var(--sangue-hover); }
+        /* sem hover — fome só muda pelo Mestre */
 
         /* ----- Ficha Viva Grid ----- */
         .sheet-section { margin-bottom: 30px; }
@@ -1173,7 +1173,7 @@
         let fichaViva = JSON.parse(localStorage.getItem(_lsKey('ficha_viva'))) || {};
         let especialidades = JSON.parse(localStorage.getItem(_lsKey('especialidades'))) || {};
         let acaoAtual = [];
-        let fomeAtual = parseInt(localStorage.getItem('fome') || '0', 10);
+        let fomeAtual = 0; // carregado do servidor — não editável pelo jogador
         let selecionadosReroll = [];
         let estadoRolagem = { normais: [], fome: [] };
         let rolando = false;
@@ -1795,21 +1795,25 @@
             for (let i = 0; i < 5; i++) {
                 const g = document.createElement('span');
                 g.className = 'gota-fome' + (i < fomeAtual ? ' cheia' : '');
-                g.onclick = () => setFome(i);
+                // sem onclick — fome só muda via tag do Mestre
                 g.appendChild(document.createElement('i'));
                 cont.appendChild(g);
             }
             document.getElementById('fome-valor-txt').textContent = fomeAtual + ' / 5';
         }
-        function setFome(i) {
-            fomeAtual = (fomeAtual === i + 1) ? i : i + 1;
-            localStorage.setItem('fome', fomeAtual);
+        function setFome(valor) {
+            fomeAtual = Math.max(0, Math.min(5, valor));
             renderGotasFome();
         }
         function ajustarFome(delta) {
+            // Chamada apenas pelo Rouse Check automático — persiste no servidor
             fomeAtual = Math.max(0, Math.min(5, fomeAtual + delta));
-            localStorage.setItem('fome', fomeAtual);
             renderGotasFome();
+            fetch('/recursos', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({hunger: fomeAtual})
+            }).catch(() => {});
         }
 
         function setBotoes(on) {
@@ -3074,6 +3078,10 @@
             document.getElementById('wp-valor').textContent = recursosAtual.willpower;
             document.getElementById('health-valor').textContent = recursosAtual.health;
             document.getElementById('humanity-valor').textContent = recursosAtual.humanity;
+            // Sincroniza fome do servidor
+            if (recursosAtual.hunger !== undefined) {
+                setFome(recursosAtual.hunger);
+            }
         }
 
         async function alterarRecurso(tipo, delta) {
@@ -3349,6 +3357,13 @@
 
                 case 'xp_atualizado':
                     carregarXP();
+                    break;
+
+                case 'fome_atualizada':
+                    const jogadorAtual2 = document.getElementById('jogador').value.trim();
+                    if (ev.valores && ev.valores[jogadorAtual2] !== undefined) {
+                        setFome(ev.valores[jogadorAtual2]);
+                    }
                     break;
             }
         }
