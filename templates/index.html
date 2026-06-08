@@ -6,7 +6,7 @@
     <title>VTM Roller - Ficha Viva</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;1,400&family=Inter:wght@400;500&family=Manrope:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
             --ouro: #c9a96e;
@@ -643,7 +643,7 @@
         .consulta-badge { font-family: 'Cinzel', serif; font-size: 0.45rem; letter-spacing: 2px; color: #6a6aaa; background: rgba(74,74,138,0.15); border: 1px solid rgba(74,74,138,0.3); border-radius: 3px; padding: 2px 6px; }
         .consulta-autor { font-family: 'Cinzel', serif; font-size: 0.55rem; color: #8888bb; letter-spacing: 1px; }
         .consulta-model { font-size: 0.45rem; color: #5555aa; letter-spacing: 1px; }
-        .hist-item.consulta-ooc p { color: #a0a0c0; font-style: italic; margin: 4px 0 0; font-family: 'Inter', sans-serif; font-size: 0.88rem; line-height: 1.5; }
+        .hist-item.consulta-ooc p { color: #a0a0c0; font-style: italic; margin: 4px 0 0; font-family: 'Manrope', sans-serif; font-size: 0.88rem; line-height: 1.65; letter-spacing: 0.01em; }
         /* Hint do comando /mestre */
         .chat-hint { font-family: 'Inter', sans-serif; font-size: 0.68rem; color: rgba(197,153,83,0.6); letter-spacing: 0.5px; user-select: none; display: flex; align-items: center; gap: 5px; }
         .chat-hint kbd { font-family: 'Courier New', monospace; font-size: 0.68rem; background: rgba(197,153,83,0.12); border: 1px solid rgba(197,153,83,0.35); border-radius: 3px; padding: 1px 6px; color: rgba(197,153,83,0.85); font-weight: 600; }
@@ -2913,7 +2913,7 @@
                         <strong style="color:${isMestre ? '#bbb' : '#ddd'};font-family:'Cinzel',serif;font-size:0.85rem;letter-spacing:1px;">${autor}</strong>
                         ${horaStr ? `<span style="color:#444;font-family:Inter,sans-serif;font-size:0.72rem;">${horaStr}</span>` : ''}
                     </div>
-                    <span style="color:#e0e0e0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;">${textoLimpo}</span>
+                    <span style="color:#e0e0e0;font-family:'Manrope',sans-serif;font-size:15px;line-height:1.65;letter-spacing:0.01em;display:block;">${textoLimpo}</span>
                 </div>`;
 
             // Botão OUVIR + botão PAUSA (apenas para o Mestre)
@@ -3902,17 +3902,35 @@
 
         async function enviarConsultaMestre(pergunta) {
             adicionarMensagemConsulta('jogador', pergunta, null);
+            const pEl = adicionarMensagemConsulta('mestre', '', 'V4L');
             try {
                 const resp = await fetch('/consulta_mestre', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({pergunta})
                 });
-                const d = await resp.json();
-                if (d.erro) { adicionarMensagemConsulta('mestre', 'Erro: ' + d.erro, 'ERR'); }
-                else { adicionarMensagemConsulta('mestre', d.resposta, d.modelo); }
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buf = '';
+                while (true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    buf += decoder.decode(value, {stream: true});
+                    const lines = buf.split('\n');
+                    buf = lines.pop();
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        const raw = line.slice(6).trim();
+                        if (raw === '[DONE]') break;
+                        try {
+                            const d = JSON.parse(raw);
+                            if (d.erro) { pEl.innerHTML = 'Erro: ' + d.erro; break; }
+                            if (d.token) { pEl.innerHTML += d.token.replace(/\n/g, '<br>'); }
+                        } catch {}
+                    }
+                }
             } catch(e) {
-                adicionarMensagemConsulta('mestre', 'Erro de conexão: ' + e.message, 'ERR');
+                pEl.innerHTML = 'Erro de conexão: ' + e.message;
             }
         }
 
@@ -3924,8 +3942,12 @@
             div.className = 'hist-item consulta-ooc';
             const modelLabel = modelo ? ` <span class="consulta-model">(${modelo})</span>` : '';
             const autorLabel = tipo === 'mestre' ? `Mestre${modelLabel}` : 'Você';
-            div.innerHTML = `<div class="consulta-ooc-header"><span class="consulta-badge">⬡ OOC</span><span class="consulta-autor">${autorLabel}</span></div><p>${texto.replace(/\n/g, '<br>')}</p>`;
+            const p = document.createElement('p');
+            p.innerHTML = texto.replace(/\n/g, '<br>');
+            div.innerHTML = `<div class="consulta-ooc-header"><span class="consulta-badge">⬡ OOC</span><span class="consulta-autor">${autorLabel}</span></div>`;
+            div.appendChild(p);
             hist.insertBefore(div, hist.firstChild);
+            return p;
         }
 
         async function enviarMensagemChat(forcar = false) {

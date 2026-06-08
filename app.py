@@ -2075,22 +2075,27 @@ def consulta_mestre():
     if canon:
         system = system + '\n\n=== CÂNONE DA CRÔNICA ===\n' + canon
 
-    try:
-        resp = get_client().chat.completions.create(
-            model="deepseek-chat",
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": pergunta}
-            ],
-            max_tokens=600,
-            temperature=0.4
-        )
-        return jsonify({
-            'resposta': resp.choices[0].message.content,
-            'modelo': 'V4L'
-        })
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
+    def generate():
+        try:
+            stream = get_client().chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": pergunta}
+                ],
+                max_tokens=600,
+                temperature=0.4,
+                stream=True
+            )
+            for chunk in stream:
+                delta = chunk.choices[0].delta.content if chunk.choices[0].delta.content else ''
+                if delta:
+                    yield f"data: {json.dumps({'token': delta})}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'erro': str(e)})}\n\n"
+
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 
 @app.route('/resumo_sessao', methods=['POST'])
