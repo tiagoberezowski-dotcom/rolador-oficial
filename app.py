@@ -340,6 +340,7 @@ def salvar_mensagem_db(autor, texto):
         )
         con.commit()
     _backup_mensagens()
+    return hora
 
 
 def carregar_historico_db():
@@ -347,9 +348,9 @@ def carregar_historico_db():
     # 1. Tenta carregar do banco (persiste entre reinícios se o chat nao foi limpo)
     with _db() as con:
         con.row_factory = sqlite3.Row
-        rows = con.execute('SELECT autor, texto FROM mensagens ORDER BY id').fetchall()
+        rows = con.execute('SELECT autor, texto, hora FROM mensagens ORDER BY id').fetchall()
     if rows:
-        mensagens_chat = [{'autor': r['autor'], 'texto': r['texto']} for r in rows]
+        mensagens_chat = [{'autor': r['autor'], 'texto': r['texto'], 'hora': r['hora'] or ''} for r in rows]
         return
     # 2. Fallback: carrega do backup em arquivo (sobrevive a limpar_chat + reinício)
     try:
@@ -361,7 +362,7 @@ def carregar_historico_db():
             with _db() as con:
                 for m in mensagens_chat:
                     con.execute('INSERT INTO mensagens (autor, texto, hora) VALUES (?, ?, ?)',
-                                (m['autor'], m['texto'], ''))
+                                (m['autor'], m['texto'], m.get('hora', '')))
                 con.commit()
     except (FileNotFoundError, json.JSONDecodeError):
         mensagens_chat = []
@@ -1139,9 +1140,9 @@ def stream_chat():
         if not texto:
             return jsonify({'erro': 'Mensagem vazia'}), 400
         with _chat_lock:
-            nova_mensagem = {"autor": jogador, "texto": texto}
+            hora = salvar_mensagem_db(jogador, texto)
+            nova_mensagem = {"autor": jogador, "texto": texto, "hora": hora}
             mensagens_chat.append(nova_mensagem)
-            salvar_mensagem_db(jogador, texto)
             balde_acoes.append(nova_mensagem)
             with _db() as con:
                 con.execute('INSERT INTO acoes_pendentes (autor, texto) VALUES (?, ?)', (jogador, texto))
@@ -1149,7 +1150,7 @@ def stream_chat():
         with _turno_lock:
             turno_atual['respondidos'].add(jogador)
         # Notifica o outro jogador da nova mensagem em tempo real.
-        broadcast({"tipo": "mensagem", "autor": jogador, "texto": texto})
+        broadcast({"tipo": "mensagem", "autor": jogador, "texto": texto, "hora": hora})
 
     with _turno_lock:
         jogadores_online = _obter_jogadores_online()
@@ -1221,8 +1222,8 @@ def stream_chat():
 
             # Persiste e encerra o turno.
             with _chat_lock:
-                mensagens_chat.append({"autor": "Mestre (IA)", "texto": full_response})
-                salvar_mensagem_db("Mestre (IA)", full_response)
+                hora = salvar_mensagem_db("Mestre (IA)", full_response)
+                mensagens_chat.append({"autor": "Mestre (IA)", "texto": full_response, "hora": hora})
                 balde_acoes.clear()
                 with _db() as con:
                     con.execute('DELETE FROM acoes_pendentes')
@@ -1239,8 +1240,8 @@ def stream_chat():
             if full_response and not salvou:
                 parcial = full_response + "\n\n*(…transmissão interrompida)*"
                 with _chat_lock:
-                    mensagens_chat.append({"autor": "Mestre (IA)", "texto": parcial})
-                    salvar_mensagem_db("Mestre (IA)", parcial)
+                    hora = salvar_mensagem_db("Mestre (IA)", parcial)
+                    mensagens_chat.append({"autor": "Mestre (IA)", "texto": parcial, "hora": hora})
                     balde_acoes.clear()
                     with _db() as con:
                         con.execute('DELETE FROM acoes_pendentes')
@@ -1297,9 +1298,9 @@ def chat_api():
         return jsonify({'erro': 'Mensagem vazia'}), 400
 
     with _chat_lock:
-        nova_mensagem = {"autor": jogador, "texto": texto}
+        hora = salvar_mensagem_db(jogador, texto)
+        nova_mensagem = {"autor": jogador, "texto": texto, "hora": hora}
         mensagens_chat.append(nova_mensagem)
-        salvar_mensagem_db(jogador, texto)
 
     return jsonify({'status': 'ok'})
 
@@ -1723,15 +1724,15 @@ def iniciar_sessao():
                 full_response += delta
                 broadcast({"tipo": "mestre_token", "delta": delta})
             with _chat_lock:
-                mensagens_chat.append({"autor": "Mestre (IA)", "texto": full_response})
-                salvar_mensagem_db("Mestre (IA)", full_response)
+                hora = salvar_mensagem_db("Mestre (IA)", full_response)
+                mensagens_chat.append({"autor": "Mestre (IA)", "texto": full_response, "hora": hora})
         except Exception as e:
             app.logger.error("Erro em iniciar_sessao: %s", e)
             if full_response:
                 parcial = full_response + "\n\n*(…transmissão interrompida)*"
                 with _chat_lock:
-                    mensagens_chat.append({"autor": "Mestre (IA)", "texto": parcial})
-                    salvar_mensagem_db("Mestre (IA)", parcial)
+                    hora = salvar_mensagem_db("Mestre (IA)", parcial)
+                    mensagens_chat.append({"autor": "Mestre (IA)", "texto": parcial, "hora": hora})
         finally:
             broadcast({"tipo": "mestre_done"})
 
@@ -1745,17 +1746,16 @@ def iniciar_sessao():
 @app.route('/limpar_chat', methods=['POST'])
 @login_required
 def limpar_chat():
-    """Esvazia o chat. O backup em arquivo preserva as mensagens; o cânone guarda o resumo."""
+    """Esvazia o chat e zera o backup. O cânone não é tocado."""
     global mensagens_chat
     with _chat_lock:
-        # Backup dentro do lock — garante que nenhuma mensagem nova chega entre backup e clear
-        _backup_mensagens_unsafe(list(mensagens_chat))
         with _db() as con:
             con.execute('DELETE FROM mensagens')
             con.execute('DELETE FROM acoes_pendentes')
             con.commit()
         mensagens_chat.clear()
         balde_acoes.clear()
+        _backup_mensagens_unsafe([])
     with _turno_lock:
         _resetar_turno()
     broadcast({"tipo": "chat_limpo"})
