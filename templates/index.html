@@ -220,6 +220,73 @@
             .btn { font-size: 0.85rem !important; padding: 10px !important; }
         }
 
+        /* ============================================================
+           MOBILE — só afeta telas ≤ 600px, desktop inalterado
+           ============================================================ */
+        @media (max-width: 600px) {
+            /* Padding geral */
+            body { padding: 8px 6px; }
+
+            /* Banner do personagem */
+            .capa-container { height: 110px; }
+            .avatar-circle  { width: 100px; height: 100px; }
+            .avatar-section { margin-top: -40px; }
+            .personagem-card { padding: 44px 12px 14px; gap: 12px; }
+            .personagem-nome { font-size: 1.2rem; letter-spacing: 2px; }
+            .personagem-info { font-size: 0.78rem; }
+
+            /* Trackers — scroll horizontal se não couber */
+            .personagem-trackers {
+                gap: 8px;
+                overflow-x: auto;
+                justify-content: flex-start;
+                padding: 4px 6px 6px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .personagem-trackers::-webkit-scrollbar { display: none; }
+            .personagem-badge-label { font-size: 0.48rem; }
+            .personagem-badge-valor { font-size: 0.82rem; }
+
+            /* Action panel — menos padding */
+            .action-panel { padding: 12px 10px; border-radius: 8px; bottom: 6px; }
+            .info-row { gap: 8px; }
+            .info-row input, .info-row select { padding: 10px 8px; font-size: 0.88rem; }
+            .btns-acao { gap: 6px; }
+            .btn { font-size: 0.78rem !important; padding: 9px 8px !important; letter-spacing: 1px !important; }
+
+            /* Resultado de rolagem */
+            .resultado-card { padding: 14px 10px; margin: 10px 0; }
+            .resultado-num  { font-size: 3rem; }
+
+            /* Ficha */
+            .sheet-col { padding: 8px; }
+            .stat-name { font-size: 0.78rem; }
+            .dot { width: 11px; height: 11px; }
+
+            /* Histórico de rolagens */
+            .hist-card { padding: 12px 10px; margin-bottom: 14px; }
+
+            /* Chat */
+            #chat-card { padding: 0; }
+            #chat-card .hist-header { padding: 10px 12px; }
+            #chat-card .hist-header h2 { font-size: 0.75rem; }
+            .chat-box  { padding: 10px 8px; }
+            #chat-input { font-size: 0.92rem; padding: 10px 8px; }
+            .chat-submit-btn { padding: 10px 12px; font-size: 0.75rem; }
+
+            /* Modais — tela cheia no mobile */
+            .modal-overlay .modal-box {
+                width: 96vw !important;
+                max-width: 96vw !important;
+                padding: 20px 14px !important;
+                max-height: 88vh;
+            }
+
+            /* XP counter */
+            #xp-bar { font-size: 0.65rem; gap: 6px; }
+        }
+
         .col-title {
             font-family: 'Cinzel', serif; color: #888; font-size: 0.8rem; letter-spacing: 2px;
             margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 6px;
