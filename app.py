@@ -225,7 +225,7 @@ historico = []
 
 # --- Banco de Dados ---
 # No Render, usa /var/data (disco persistente). Localmente, usa a raiz do projeto.
-DB_PATH = '/var/data/banco.db' if os.path.exists('/var/data') else os.path.join(os.path.dirname(os.path.abspath(__file__)), 'banco.db')
+DB_PATH = '/var/data/banco.db'
 BACKUP_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backup_mensagens.json')
 
 _canon_lock = threading.Lock()
