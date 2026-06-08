@@ -326,6 +326,29 @@ def init_db():
             descricao TEXT,
             timestamp TEXT DEFAULT (datetime('now','localtime'))
         )''')
+        # --- Mundo persistente do narrador ---
+        con.execute('''CREATE TABLE IF NOT EXISTS relogios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT UNIQUE NOT NULL,
+            atual INTEGER DEFAULT 0,
+            maximo INTEGER DEFAULT 6,
+            atualizado_em TEXT DEFAULT (datetime('now','localtime'))
+        )''')
+        con.execute('''CREATE TABLE IF NOT EXISTS sementes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            descricao TEXT NOT NULL,
+            status TEXT DEFAULT 'plantado',
+            criada_em TEXT DEFAULT (datetime('now','localtime')),
+            colhida_em TEXT
+        )''')
+        con.execute('''CREATE TABLE IF NOT EXISTS prestacao (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            devedor TEXT NOT NULL,
+            credor TEXT NOT NULL,
+            nivel TEXT,
+            status TEXT DEFAULT 'ativo',
+            criada_em TEXT DEFAULT (datetime('now','localtime'))
+        )''')
         # Migration: adiciona coluna avatar à tabela fichas se ainda não existir
         try:
             con.execute('ALTER TABLE fichas ADD COLUMN avatar TEXT DEFAULT ""')
@@ -504,6 +527,38 @@ def _estado_personagens():
     return '\n'.join(linhas)
 
 
+def _barra_relogio(atual, maximo):
+    atual = max(0, min(atual, maximo))
+    return '▰' * atual + '▱' * (maximo - atual)
+
+
+def _estado_mundo():
+    """Monta o estado persistente do mundo (relógios, sementes, prestação) para injetar no contexto da IA."""
+    blocos = []
+    with _db() as con:
+        relogios = con.execute(
+            'SELECT id, nome, atual, maximo FROM relogios WHERE atual < maximo ORDER BY id'
+        ).fetchall()
+        sementes = con.execute(
+            "SELECT id, descricao FROM sementes WHERE status = 'plantado' ORDER BY id"
+        ).fetchall()
+        prestacao = con.execute(
+            "SELECT id, devedor, credor, nivel FROM prestacao WHERE status = 'ativo' ORDER BY id"
+        ).fetchall()
+
+    if relogios:
+        linhas = [f"#{r[0]} {r[1]} {_barra_relogio(r[2], r[3])} ({r[2]}/{r[3]})" for r in relogios]
+        blocos.append("[RELÓGIOS DE PROGRESSÃO]\n" + '\n'.join(linhas))
+    if sementes:
+        linhas = [f"#{s[0]} {s[1]}" for s in sementes]
+        blocos.append("[SEMENTES PLANTADAS — ainda não colhidas]\n" + '\n'.join(linhas))
+    if prestacao:
+        linhas = [f"#{p[0]} {p[1]} deve a {p[2]} ({p[3] or 'favor'})" for p in prestacao]
+        blocos.append("[PRESTAÇÃO ATIVA]\n" + '\n'.join(linhas))
+
+    return '\n\n'.join(blocos)
+
+
 def gerar_resposta_ia(acoes, stream=False):
     """
     Liga para a API da DeepSeek e pede para ela narrar o turno.
@@ -544,7 +599,7 @@ Você **nunca sai do personagem de Narrador**, exceto quando algum jogador escre
 
 **7. Toda vitória cobra um preço.** Não existe rota limpa. Sangue, status, um Pilar, um aliado, um caco de Humanidade — algo sempre é pago. Vitórias de um personagem podem criar custos para o outro.
 
-**8. Plante antes de colher (regra dos três indícios).** Nenhuma reviravolta surge do nada. Toda traição é semeada com pelo menos três pistas justas e sutis, espalhadas com antecedência. Quando revelada, os jogadores devem pensar "*os sinais estavam todos ali*", nunca "*isso foi aleatório*".
+**8. Plante antes de colher (regra dos três indícios).** Nenhuma reviravolta surge do nada. Toda traição é semeada com pelo menos três pistas justas e sutis, espalhadas com antecedência. Quando revelada, os jogadores devem pensar "*os sinais estavam todos ali*", nunca "*isso foi aleatório*". As sementes plantadas são **rastreadas de verdade** no bloco `[SEMENTES PLANTADAS]` — registre cada pista com a tag de controle e marque-a como colhida quando der o pagamento.
 
 **9. Fracasso é combustível, não fim de jogo.** Planos desabam de formas interessantes e o mundo segue reagindo. *Game over* só na Morte Final — dramática e merecida.
 
@@ -631,17 +686,15 @@ O Narrador pode, com consentimento prévio dos jogadores, narrar informações q
 
 ## VIII. RELÓGIOS DE PROGRESSÃO (o mundo em movimento)
 
-Mantenha "relógios" internos para os planos das facções e ameaças (4 ou 6 segmentos). A cada cena ou intervalo relevante, **avance-os** conforme as ações — ou inações — dos personagens e dos NPCs:
+Os relógios das facções são **persistentes e reais** — eles vêm injetados no bloco `[RELÓGIOS DE PROGRESSÃO]` do estado, com o valor atual. Não são imaginários: você lê o valor atual e **decide se avança**.
 
-> Ex.: *Conspiração do Primogênito Ventrue contra o Príncipe* ▰▰▱▱▱▱ → os personagens ignoraram os sinais → ▰▰▰▱▱▱.
+A cada cena relevante, se as ações (ou inações) dos personagens fizerem um plano de facção progredir, avance o relógio com a tag de controle (ver seção sobre tags). Quando um relógio chega ao máximo, o evento **acontece** no mundo, com ou sem os personagens presentes — narre a consequência e o relógio se encerra.
 
-Quando um relógio se completa, o evento **acontece** no mundo, com ou sem os personagens presentes. Nunca mostre os relógios diretamente — revele só as consequências. A inação de ambos é uma escolha que avança os relógios.
-
-**Relógios sugeridos para Varsóvia em 2026 no início (adapte conforme as fichas):**
-- *Kindred deslocados da Ucrânia se organizando na Praga* ▰▰▱▱▱▱
-- *Interesse da Segunda Inquisição na rota de refugiados* ▰▱▱▱▱▱
-- *Disputa por domínio territorial na Śródmieście* ▱▱▱▱▱▱
-- *Segredo do Príncipe sobre Por Que Ele Ficou — prestes a vazar* ▱▱▱▱▱▱
+**Regras:**
+- Nunca mostre os relógios ou as tags ao jogador — revele só as consequências na ficção.
+- Avance no máximo 1 segmento por cena, salvo evento drástico.
+- A inação de ambos é uma escolha que avança os relógios.
+- Se um plano relevante ainda não tem relógio, crie um com a tag.
 
 ---
 
@@ -684,6 +737,28 @@ Aplique as regras como tensão narrativa, jamais como planilha.
   `[J1 — Fome: 2 | Humanidade: 7 | Vontade: 4/6] [J2 — Fome: 1 | Humanidade: 6 | Vontade: 5/6] | Cena: Elysium — Galeria Kindred`
 - Rolagem verificável:
   `[Nome] — Manipulação + Subterfúgio (4 dados, 2 de Fome) vs. Dif. 3 → 7, 9, 2, 10 = 2 sucessos. Faltou 1. Quer gastar Vontade?`
+
+---
+
+### EXEMPLO-OURO — uma resposta exemplar (estude o padrão, não copie o conteúdo)
+
+> *Contexto: Lior (Hunger 3) e Fryderyk (Hunger 1) esperam Celestyna numa galeria fechada da Śródmieście. Ela chega atrasada.*
+
+A porta da galeria não range — alguém a azeitou recentemente. **Celestyna** entra trazendo o frio da rua nos ombros do casaco, e o cheiro dela chega antes do rosto: papel velho, tinta, e por baixo, sangue que não é o dela. Para Lior, esse último detalhe é alto demais; a sala inteira encolhe ao redor da veia no pescoço dela.
+
+[NPC: Celestyna Brzóska]
+— Que paciência a de vocês — diz ela, sem se desculpar pelo atraso, abrindo o caderno numa página já escrita. — Anotei que esperaram. A Harpia aprecia quem sabe esperar. Quase tanto quanto aprecia saber *por quê*.
+
+Ela não pergunta nada. Senta-se, cruza as mãos sobre o caderno fechado, e olha para Fryderyk como quem confere um número numa lista.
+
+O caderno tem uma fita vermelha marcando uma página que não estava ali na última vez.
+
+Fryderyk, ela espera algo de você — e finge que não. Lior, a sala está quente e o pescoço dela continua batendo. O que vocês fazem?
+
+[RELOGIO: Interesse de Celestyna no segredo de Fryderyk | 2/4]
+[SEMENTE: fita vermelha nova marcando uma página do caderno de Celestyna]
+
+**Por que funciona:** abre com detalhe sensorial concreto (porta azeitada = alguém preparou isto); Fome 3 do Lior modula a prosa (a veia "alta demais"); a fala de Celestyna é puro subtext (ela não acusa, "constata que anotou"); termina devolvendo a vez aos dois com tensão aberta, sem resolver; e atualiza o mundo persistente nas tags ao fim, invisíveis ao jogador.
 
 ---
 
@@ -982,22 +1057,52 @@ Regras:
 - Use apenas quando for narrativamente apropriado conceder XP (não em toda resposta)
 - Valores típicos: 1-3 XP por evento/sessão
 - Pode conceder para um ou ambos os jogadores
-- A tag é processada automaticamente — não mencione XP no texto narrativo"""
+- A tag é processada automaticamente — não mencione XP no texto narrativo
+
+---
+
+### J. TAGS DE MUNDO PERSISTENTE — MEMÓRIA REAL DO NARRADOR
+
+Estas tags dão ao mundo memória de verdade entre as cenas. São **invisíveis ao jogador** (removidas automaticamente) e devem ficar **no fim da resposta, cada uma em sua própria linha**, depois da narração. Use só quando algo realmente mudar — não em toda resposta.
+
+**Relógios** (planos de facção). Você vê o valor atual no bloco `[RELÓGIOS DE PROGRESSÃO]`. Para avançar ou criar:
+`[RELOGIO: Conspiração do Primogênito Ventrue | 3/6]`
+- Sempre informe o valor absoluto novo no formato `atual/máximo` (máximo 4 ou 6).
+- Se o relógio já existe, o nome deve ser **idêntico** ao injetado.
+
+**Sementes** (regra dos três indícios). Ao plantar uma pista sutil para uma revelação futura:
+`[SEMENTE: Awrum mente sobre onde estava na noite do incêndio]`
+Ao revelar o pagamento de uma semente já plantada (veja o `#id` no bloco `[SEMENTES PLANTADAS]`):
+`[COLHEU: #3]`
+
+**Prestação** (favores/boons). Ao registrar um favor devido entre personagens/NPCs:
+`[PRESTACAO: Lior deve Celestyna | menor]`
+Níveis: trivial, menor, maior, de sangue, de vida. Ao quitar (veja `#id` em `[PRESTAÇÃO ATIVA]`):
+`[PRESTACAO-PAGA: #2]`
+
+Nunca mencione relógios, sementes, ids ou prestação com linguagem mecânica dentro da narração — só as consequências na ficção."""
 
     # Monta a memória do chat (para a IA lembrar do que aconteceu)
     mensagens_api = [{"role": "system", "content": prompt_sistema}]
 
-    # Injeta estado atual dos personagens como contexto compacto
-    estado = _estado_personagens()
-    if estado:
-        mensagens_api.append({"role": "user", "content": f"[ESTADO ATUAL]\n{estado}"})
-        mensagens_api.append({"role": "assistant", "content": "Estado registrado."})
-
-    # Injeta o bloco de cânone como primeira mensagem — referência fixa sempre visível
+    # Injeta o bloco de cânone primeiro — junto com o system prompt forma o prefixo
+    # estático que a DeepSeek mantém em cache. Conteúdo dinâmico vem DEPOIS.
     canon = obter_canon()
     if canon:
         mensagens_api.append({"role": "user", "content": canon})
         mensagens_api.append({"role": "assistant", "content": "Cânone registrado. Toda a continuidade da crônica está confirmada. Prossigo."})
+
+    # Estado dinâmico: personagens + mundo persistente (relógios, sementes, prestação).
+    partes_estado = []
+    estado_pers = _estado_personagens()
+    if estado_pers:
+        partes_estado.append("[ESTADO ATUAL]\n" + estado_pers)
+    estado_mundo = _estado_mundo()
+    if estado_mundo:
+        partes_estado.append(estado_mundo)
+    if partes_estado:
+        mensagens_api.append({"role": "user", "content": '\n\n'.join(partes_estado)})
+        mensagens_api.append({"role": "assistant", "content": "Estado do mundo registrado."})
 
     # Só as mensagens recentes — o passado distante já está condensado no cânone.
     for msg in mensagens_chat[-MAX_CONTEXTO_CHAT:]:
@@ -1125,6 +1230,7 @@ def stream_chat():
 
     def generate():
         full_response = ""
+        emitido_len = 0  # quanto do texto visível já foi enviado ao vivo
         salvou = False
         # Rastreia o NPC ativo no stream para separar tokens por personagem.
         npc_corrente = None
@@ -1166,12 +1272,29 @@ def stream_chat():
                     continue
 
                 full_response += delta
+
+                # Calcula o trecho visível: corta a partir da primeira tag de controle
+                # (XP/RELOGIO/etc, sempre no fim) e segura um '[' aberto no fim, que pode
+                # ser uma tag de controle ainda chegando — evita o flash das tags na tela.
+                m_ctrl = _CONTROL_RE.search(full_response)
+                limite = m_ctrl.start() if m_ctrl else len(full_response)
+                if m_ctrl is None:
+                    seg = full_response[:limite]
+                    ult_abre = seg.rfind('[')
+                    ult_fecha = seg.rfind(']')
+                    if ult_abre > ult_fecha:
+                        limite = ult_abre
+                if limite <= emitido_len:
+                    continue
+                novo = full_response[emitido_len:limite]
+                emitido_len = limite
+
                 # Yield para o remetente via HTTP (seu próprio stream).
-                yield f"data: {json.dumps({'token': delta})}\n\n"
+                yield f"data: {json.dumps({'token': novo})}\n\n"
 
                 # Broadcast para o outro jogador via SSE.
                 # Detecta tag NPC no acumulado para separar falas.
-                texto_acumulado_npc += delta
+                texto_acumulado_npc += novo
                 npc_match = re.search(r'\[NPC:\s*([^\]]+)\]\n?', texto_acumulado_npc)
                 if npc_match:
                     nome_npc = npc_match.group(1).strip()
@@ -1179,12 +1302,13 @@ def stream_chat():
                     npc_corrente = nome_npc
                     broadcast({"tipo": "mestre_npc_inicio", "nome": nome_npc})
                 elif npc_corrente:
-                    broadcast({"tipo": "mestre_token_npc", "delta": delta, "nome": npc_corrente})
+                    broadcast({"tipo": "mestre_token_npc", "delta": novo, "nome": npc_corrente})
                 else:
-                    broadcast({"tipo": "mestre_token", "delta": delta})
+                    broadcast({"tipo": "mestre_token", "delta": novo})
 
-            # Processa tag de XP antes de salvar.
+            # Processa tags de controle (XP e mundo persistente) antes de salvar.
             full_response, xp_concedidos = _processar_xp_tag(full_response)
+            full_response, mundo_mudou = _processar_tags_mundo(full_response)
 
             # Persiste e encerra o turno.
             with _chat_lock:
@@ -1201,12 +1325,17 @@ def stream_chat():
 
             if xp_concedidos:
                 broadcast({"tipo": "xp_atualizado", "concedidos": xp_concedidos})
+            if mundo_mudou:
+                broadcast({"tipo": "mundo_atualizado"})
 
             broadcast({"tipo": "mestre_done"})
             yield f"data: {json.dumps({'done': True})}\n\n"
         except Exception as e:
             app.logger.error("Erro em stream_chat: %s", e)
             if full_response and not salvou:
+                # Limpa tags de controle incompletas antes de salvar o parcial.
+                full_response, _ = _processar_xp_tag(full_response)
+                full_response, _ = _processar_tags_mundo(full_response)
                 parcial = full_response + "\n\n*(…transmissão interrompida)*"
                 with _chat_lock:
                     hora = salvar_mensagem_db("Mestre (IA)", parcial)
@@ -1912,6 +2041,95 @@ def _processar_xp_tag(texto):
     return texto_limpo, concedidos
 
 
+# Prefixos de tags de controle — usados para suprimir do stream ao vivo e limpar o texto salvo.
+_CONTROL_RE = re.compile(r'\[(?:XP|RELOGIO|SEMENTE|COLHEU|PRESTACAO)\b', re.IGNORECASE)
+
+
+def _processar_tags_mundo(texto):
+    """Processa tags de mundo persistente do narrador e retorna (texto_limpo, mudou)."""
+    mudou = False
+
+    # [RELOGIO: Nome | 3/6]  ou  [RELOGIO: Nome | +1]
+    for m in re.finditer(r'\[RELOGIO:\s*([^|\]]+?)\s*\|\s*([^\]]+?)\s*\]', texto, re.IGNORECASE):
+        nome = m.group(1).strip()
+        valor = m.group(2).strip()
+        if not nome:
+            continue
+        try:
+            with _db() as con:
+                if valor.startswith('+') or valor.startswith('-'):
+                    delta = int(valor)
+                    row = con.execute('SELECT atual, maximo FROM relogios WHERE nome = ?', (nome,)).fetchone()
+                    if row:
+                        novo = max(0, min(row[0] + delta, row[1]))
+                        con.execute("UPDATE relogios SET atual = ?, atualizado_em = datetime('now','localtime') WHERE nome = ?", (novo, nome))
+                        mudou = True
+                elif '/' in valor:
+                    atual_s, max_s = valor.split('/', 1)
+                    atual, maximo = int(atual_s.strip()), int(max_s.strip())
+                    maximo = max(1, maximo)
+                    atual = max(0, min(atual, maximo))
+                    con.execute(
+                        '''INSERT INTO relogios (nome, atual, maximo) VALUES (?, ?, ?)
+                           ON CONFLICT(nome) DO UPDATE SET atual = excluded.atual,
+                           maximo = excluded.maximo, atualizado_em = datetime('now','localtime')''',
+                        (nome, atual, maximo)
+                    )
+                    mudou = True
+                con.commit()
+        except (ValueError, sqlite3.Error):
+            continue
+
+    # [SEMENTE: descrição do elemento plantado]
+    for m in re.finditer(r'\[SEMENTE:\s*([^\]]+?)\s*\]', texto, re.IGNORECASE):
+        desc = m.group(1).strip()
+        if desc:
+            with _db() as con:
+                con.execute('INSERT INTO sementes (descricao) VALUES (?)', (desc,))
+                con.commit()
+            mudou = True
+
+    # [COLHEU: #id]  — marca semente como colhida
+    for m in re.finditer(r'\[COLHEU:\s*#?(\d+)\s*\]', texto, re.IGNORECASE):
+        sid = int(m.group(1))
+        with _db() as con:
+            con.execute(
+                "UPDATE sementes SET status = 'colhido', colhida_em = datetime('now','localtime') WHERE id = ?",
+                (sid,)
+            )
+            con.commit()
+        mudou = True
+
+    # [PRESTACAO: Devedor deve Credor | nivel]
+    for m in re.finditer(r'\[PRESTACAO:\s*([^|\]]+?)\s+deve\s+([^|\]]+?)\s*\|\s*([^\]]+?)\s*\]', texto, re.IGNORECASE):
+        devedor = m.group(1).strip()
+        credor = m.group(2).strip()
+        nivel = m.group(3).strip()
+        if devedor and credor:
+            with _db() as con:
+                con.execute(
+                    'INSERT INTO prestacao (devedor, credor, nivel) VALUES (?, ?, ?)',
+                    (devedor, credor, nivel)
+                )
+                con.commit()
+            mudou = True
+
+    # [PRESTACAO-PAGA: #id]
+    for m in re.finditer(r'\[PRESTACAO-PAGA:\s*#?(\d+)\s*\]', texto, re.IGNORECASE):
+        pid = int(m.group(1))
+        with _db() as con:
+            con.execute("UPDATE prestacao SET status = 'pago' WHERE id = ?", (pid,))
+            con.commit()
+        mudou = True
+
+    # Remove todas as tags de controle do texto exibido.
+    texto_limpo = re.sub(
+        r'\s*\[(?:RELOGIO|SEMENTE|COLHEU|PRESTACAO(?:-PAGA)?):[^\]]*\]',
+        '', texto, flags=re.IGNORECASE
+    ).rstrip()
+    return texto_limpo, mudou
+
+
 def _custo_xp(jogador, stat):
     if stat in _ATTRIBUTES:
         return 5
@@ -2008,6 +2226,27 @@ def xp_log():
             (jogador,)
         ).fetchall()
     return jsonify({'log': [{'tipo': r[0], 'quantidade': r[1], 'descricao': r[2], 'timestamp': r[3]} for r in rows]})
+
+
+@app.route('/mundo', methods=['GET'])
+@login_required
+def get_mundo():
+    """Estado persistente do mundo do narrador — para verificação do Mestre."""
+    with _db() as con:
+        relogios = con.execute(
+            'SELECT id, nome, atual, maximo FROM relogios ORDER BY id'
+        ).fetchall()
+        sementes = con.execute(
+            'SELECT id, descricao, status FROM sementes ORDER BY id'
+        ).fetchall()
+        prestacao = con.execute(
+            'SELECT id, devedor, credor, nivel, status FROM prestacao ORDER BY id'
+        ).fetchall()
+    return jsonify({
+        'relogios': [{'id': r[0], 'nome': r[1], 'atual': r[2], 'maximo': r[3]} for r in relogios],
+        'sementes': [{'id': s[0], 'descricao': s[1], 'status': s[2]} for s in sementes],
+        'prestacao': [{'id': p[0], 'devedor': p[1], 'credor': p[2], 'nivel': p[3], 'status': p[4]} for p in prestacao],
+    })
 
 
 @app.route('/historico')
