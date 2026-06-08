@@ -396,7 +396,7 @@
         .historico-texto { font-family: 'Crimson Text', serif; font-size: 1.05rem; color: #cfc2ac; line-height: 1.6;}
         .hist-item { background: #161616; padding: 12px; border-radius: 6px; margin-bottom: 12px; border-left: 3px solid var(--borda-ouro); }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-        .cursor-streaming { display: inline-block; width: 2px; height: 1em; background: var(--sangue); animation: blink 0.7s step-end infinite; vertical-align: text-bottom; margin-left: 1px; }
+        .cursor-streaming { display: inline-block; width: 2px; height: 1em; background: #666; animation: blink 0.7s step-end infinite; vertical-align: text-bottom; margin-left: 1px; }
 
         /* Indicador de presença */
         .presenca-bar {
@@ -566,6 +566,62 @@
         }
         .modal-textarea:focus { outline: none; border-color: var(--ouro); }
         .modal-btns { display: flex; gap: 10px; }
+
+        /* ----- Chat: estilo minimalista ----- */
+        #chat-card { border-color: #2e2e2e; background: #181818; }
+        #chat-card .hist-header h2 { color: #aaa; font-size: 0.9rem; letter-spacing: 2px; }
+        #chat-card .hist-header { border-bottom-color: #2e2e2e; }
+
+        #chat-card .chat-input-wrapper {
+            background: #242424;
+            border-color: #333;
+        }
+        #chat-card .chat-input-wrapper:focus-within {
+            border-color: #555;
+            box-shadow: none;
+        }
+        #chat-card #chat-input {
+            color: #e8e8e8;
+            font-family: Inter, sans-serif;
+            font-size: 0.95rem;
+        }
+        #chat-card #chat-input::placeholder { color: #555; }
+
+        #chat-card .chat-submit-btn {
+            background: #333;
+            color: #aaa;
+        }
+        #chat-card .chat-submit-btn:hover { background: #444; color: #fff; }
+
+        #chat-card .mestre-typing {
+            background: #242424;
+            border-left-color: #555;
+            color: #888;
+        }
+        #chat-card .mestre-typing .typing-dot { background: #666; }
+
+        #chat-card .chat-scroll-btn {
+            background: #333;
+            box-shadow: none;
+        }
+        #chat-card .chat-scroll-btn:hover { background: #444; }
+
+        #chat-card .chat-input-footer span { color: #555; }
+        #chat-card #contador-chars { color: #555; }
+        #chat-card #contador-chars.warning { color: #888; }
+        #chat-card #contador-chars.danger { color: #c06060; }
+
+        #chat-card .btn-prosseguir {
+            border-color: #444; color: #888;
+        }
+        #chat-card .btn-prosseguir:hover { background: #2a2a2a; color: #ccc; }
+
+        #chat-card .aguardando-turno {
+            background: #242424; border-left-color: #555; color: #888;
+        }
+        #chat-card .aguardando-lista { color: #777; }
+        #chat-card .aguardando-lista span::before { color: #555; }
+        #chat-card .aguardando-lista span.respondido::before { color: #aaa; }
     </style>
 </head>
 <body>
@@ -716,7 +772,7 @@
         
 
 
-        <div class="hist-card" style="margin-bottom: 25px;">
+        <div class="hist-card" id="chat-card" style="margin-bottom: 25px;">
             <div class="hist-header">
                 <h2>MESA VIRTUAL (CHAT)</h2>
                 <div style="display:flex; gap:8px;">
@@ -724,7 +780,7 @@
                 </div>
             </div>
             <div class="presenca-bar" id="presenca-bar"></div>
-            <div id="chat-mensagens" style="height: 400px; overflow-y: auto; background: #111; padding: 15px; border-radius: 6px; border: 1px solid var(--borda-ouro); margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; position: relative;">
+            <div id="chat-mensagens" style="height: clamp(400px, 55vh, 680px); overflow-y: auto; background: #1e1e1e; padding: 15px; border-radius: 6px; border: 1px solid #2e2e2e; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; position: relative;">
                 <!-- As mensagens vão aparecer aqui -->
             </div>
             <button class="chat-scroll-btn" id="chat-scroll-btn" onclick="scrollParaBaixoChat()">♱ NOVAS</button>
@@ -831,7 +887,7 @@
             "Auspex": [
                 { nome: "Heightened Senses",   nivel: 1, custo: "gratuito", formula: { attr: "Wits",         disc: "Resolve" } },
                 { nome: "Sense the Unseen",    nivel: 1, custo: "gratuito", formula: { attr: "Resolve",       disc: "Auspex" } },
-                { nome: "Premonition",         nivel: 2, custo: "gratuito", formula: { attr: "Resolve",       disc: "Auspex" } },
+                { nome: "Premonition",         nivel: 2, custo: "gratuito ou 1 Rouse", formula: { attr: "Resolve",       disc: "Auspex" } },
                 { nome: "Reveal Temperament",  nivel: 2, custo: "1 Rouse",  formula: { attr: "Intelligence",  disc: "Auspex" } },
                 { nome: "Scry the Soul",       nivel: 3, custo: "1 Rouse",  formula: { attr: "Intelligence",  disc: "Auspex" } },
                 { nome: "Share the Senses",    nivel: 3, custo: "1 Rouse",  formula: { attr: "Resolve",       disc: "Auspex" } },
@@ -2056,27 +2112,32 @@
             return texto.replace(/\[[^\]]{1,60}\]/g, '').replace(/\s{2,}/g, ' ').trim();
         }
 
-        function criarMsgDiv(autor, textoHTML, isMestre, avatarUrl) {
-            const cor = isMestre ? 'var(--sangue)' : 'var(--ouro)';
-            const bg  = isMestre ? '#2a1515' : '#1a1a1a';
+        function criarMsgDiv(autor, textoHTML, isMestre, avatarUrl, hora) {
+            const cor = isMestre ? '#777' : '#888';
+            const bg  = isMestre ? '#252525' : '#242424';
+            const bordaCor = isMestre ? '#3a3a3a' : '#333';
             const div = document.createElement('div');
-            div.style.cssText = `padding:12px 14px;border-radius:6px;background:${bg};border-left:4px solid ${cor};display:flex;gap:10px;align-items:flex-start;`;
+            div.style.cssText = `padding:12px 14px;border-radius:6px;background:${bg};border-left:3px solid ${bordaCor};display:flex;gap:10px;align-items:flex-start;`;
 
             const avatar = miniAvatarHTML(avatarUrl, cor);
             const textoLimpo = isMestre ? stripAudioTags(textoHTML) : textoHTML;
             const textoTTS   = isMestre ? textoHTML : '';
+            const horaStr = hora ? hora.slice(-5) : '';
 
             div.innerHTML = `
                 ${avatar ? `<div style="flex-shrink:0;margin-top:2px;">${avatar}</div>` : ''}
                 <div style="flex:1;min-width:0;">
-                    <strong style="display:block;color:${cor};font-family:'Cinzel',serif;font-size:0.85rem;letter-spacing:1px;margin-bottom:5px;">${autor}</strong>
-                    <span style="color:#e0e0e0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;text-align:justify;">${textoLimpo}</span>
+                    <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:5px;">
+                        <strong style="color:${isMestre ? '#bbb' : '#ddd'};font-family:'Cinzel',serif;font-size:0.85rem;letter-spacing:1px;">${autor}</strong>
+                        ${horaStr ? `<span style="color:#444;font-family:Inter,sans-serif;font-size:0.72rem;">${horaStr}</span>` : ''}
+                    </div>
+                    <span style="color:#e0e0e0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;">${textoLimpo}</span>
                 </div>`;
 
             // Botão OUVIR + botão PAUSA (apenas para o Mestre)
             if (isMestre) {
                 const corpoDiv = div.querySelector('div');
-                const btnStyle = "margin-top:8px;background:none;border:1px solid var(--sangue);color:var(--sangue);border-radius:4px;padding:3px 10px;font-size:0.75rem;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px;opacity:0.8;";
+                const btnStyle = "margin-top:8px;background:none;border:1px solid #444;color:#888;border-radius:4px;padding:3px 10px;font-size:0.75rem;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px;opacity:0.8;";
 
                 const btnPlay = document.createElement('button');
                 btnPlay.textContent = '▶ OUVIR';
@@ -2451,13 +2512,13 @@
         function sseCriarBlocoNPC(nome) {
             sseFinalizarNPC();
             const div = document.createElement('div');
-            div.style.cssText = 'padding:12px 14px;border-radius:6px;background:#1a0a0a;border-left:4px solid var(--sangue);display:flex;gap:10px;align-items:flex-start;';
+            div.style.cssText = 'padding:12px 14px;border-radius:6px;background:#252525;border-left:3px solid #555;display:flex;gap:10px;align-items:flex-start;';
             const avatarEl = criarAvatarNPCClicavel(nome);
             const corpo = document.createElement('div');
             corpo.style.cssText = 'flex:1;min-width:0;';
-            corpo.innerHTML = `<strong style="display:block;color:var(--sangue);font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:2px;margin-bottom:5px;">${nome.toUpperCase()}</strong>`;
+            corpo.innerHTML = `<strong style="display:block;color:#aaa;font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:2px;margin-bottom:5px;">${nome.toUpperCase()}</strong>`;
             const span = document.createElement('span');
-            span.style.cssText = 'color:#e0d0d0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;font-style:italic;';
+            span.style.cssText = 'color:#d8d8d8;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;font-style:italic;';
             const cur = document.createElement('span');
             cur.className = 'cursor-streaming';
             corpo.appendChild(span); corpo.appendChild(cur);
@@ -2479,7 +2540,7 @@
                 case 'mensagem':
                     if (ev.autor !== jogadorAtual) {
                         obterAvatarJogador(ev.autor).then(avatarUrl => {
-                            const msgDiv = criarMsgDiv(ev.autor, formatarTextoChat(ev.texto), false, avatarUrl);
+                            const msgDiv = criarMsgDiv(ev.autor, formatarTextoChat(ev.texto), false, avatarUrl, ev.hora);
                             chatBox.appendChild(msgDiv);
                             chatBox.scrollTop = chatBox.scrollHeight;
                         });
@@ -2502,11 +2563,11 @@
                     chatBox.scrollTop = chatBox.scrollHeight;
 
                     sseAiDiv = document.createElement('div');
-                    sseAiDiv.style.cssText = 'padding:14px 16px;border-radius:6px;background:#2a1515;border-left:4px solid var(--sangue);';
-                    sseAiDiv.innerHTML = '<strong style="display:block;color:var(--sangue);font-family:Cinzel,serif;font-size:0.85rem;letter-spacing:1px;margin-bottom:6px;">MESTRE (IA)</strong>';
+                    sseAiDiv.style.cssText = 'padding:14px 16px;border-radius:6px;background:#252525;border-left:3px solid #3a3a3a;';
+                    sseAiDiv.innerHTML = '<strong style="display:block;color:#bbb;font-family:Cinzel,serif;font-size:0.85rem;letter-spacing:1px;margin-bottom:6px;">MESTRE (IA)</strong>';
                     ssePensandoTexto = '';
                     ssePensandoSpan = document.createElement('span');
-                    ssePensandoSpan.style.cssText = 'color:#8a6a6a;font-family:Inter,sans-serif;font-size:13px;line-height:1.5;display:block;font-style:italic;opacity:0.75;max-height:90px;overflow:hidden;border-bottom:1px dashed #4a2a2a;padding-bottom:8px;margin-bottom:8px;';
+                    ssePensandoSpan.style.cssText = 'color:#777;font-family:Inter,sans-serif;font-size:13px;line-height:1.5;display:block;font-style:italic;opacity:0.75;max-height:90px;overflow:hidden;border-bottom:1px dashed #333;padding-bottom:8px;margin-bottom:8px;';
                     sseAiDiv.appendChild(ssePensandoSpan);
                     sseTextSpan = document.createElement('span');
                     sseTextSpan.style.cssText = 'color:#e0e0e0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;text-align:justify;';
@@ -2616,6 +2677,7 @@
 
         /* ---------- LÓGICA DO CHAT ---------- */
         let chatMsgCount = 0;
+        let ultimoHashChat = "";
         let userScrolling = false;
         let scrollTimeout;
         let _turnoPendente = false;     // Mestre prestes a responder → poll acelera
@@ -2708,6 +2770,10 @@
                 const temNovaMensagem = newCount > chatMsgCount;
                 chatMsgCount = newCount;
 
+                const hashAtual = JSON.stringify({ msgs, turno: data.turno });
+                if (!forcarScroll && hashAtual === ultimoHashChat) return;
+                ultimoHashChat = hashAtual;
+
                 chatBox.innerHTML = '';
 
                 // Chat vazio — mostra botão de abrir sessão
@@ -2737,11 +2803,11 @@
                                 const textoNPC = bloco.trim();
                                 if (textoNPC) {
                                     const npcEl = document.createElement('div');
-                                    npcEl.style.cssText = 'padding:12px 14px;border-radius:6px;background:#1a0a0a;border-left:4px solid var(--sangue);display:flex;gap:10px;align-items:flex-start;';
+                                    npcEl.style.cssText = 'padding:12px 14px;border-radius:6px;background:#252525;border-left:3px solid #555;display:flex;gap:10px;align-items:flex-start;';
                                     const avatarEl = criarAvatarNPCClicavel(npcCorrente);
                                     const corpo = document.createElement('div');
                                     corpo.style.cssText = 'flex:1;min-width:0;';
-                                    corpo.innerHTML = `<strong style="display:block;color:var(--sangue);font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:2px;margin-bottom:5px;">${npcCorrente.toUpperCase()}</strong><span style="color:#e0d0d0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;font-style:italic;">${formatarTextoChat(textoNPC)}</span>`;
+                                    corpo.innerHTML = `<strong style="display:block;color:#aaa;font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:2px;margin-bottom:5px;">${npcCorrente.toUpperCase()}</strong><span style="color:#d8d8d8;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;font-style:italic;">${formatarTextoChat(textoNPC)}</span>`;
                                     npcEl.appendChild(avatarEl);
                                     npcEl.appendChild(corpo);
                                     chatBox.appendChild(npcEl);
@@ -2750,14 +2816,14 @@
                             } else {
                                 const textoMestre = bloco.trim();
                                 if (textoMestre) {
-                                    const div = criarMsgDiv(msg.autor, formatarTextoChat(textoMestre), true, '');
+                                    const div = criarMsgDiv(msg.autor, formatarTextoChat(textoMestre), true, '', msg.hora);
                                     chatBox.appendChild(div);
                                 }
                             }
                         }
                     } else {
                         const avatarUrl = await obterAvatarJogador(msg.autor);
-                        const div = criarMsgDiv(msg.autor, formatarTextoChat(msg.texto), false, avatarUrl);
+                        const div = criarMsgDiv(msg.autor, formatarTextoChat(msg.texto), false, avatarUrl, msg.hora);
                         chatBox.appendChild(div);
                     }
                 }
@@ -2833,7 +2899,8 @@
             if (!forcar) {
                 const jogador = document.getElementById('jogador').value.trim().toUpperCase();
                 const avatarAtual = currentAvatarUrl;
-                const playerDiv = criarMsgDiv(jogador, formatarTextoChat(texto), false, avatarAtual);
+                const horaLocal = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                const playerDiv = criarMsgDiv(jogador, formatarTextoChat(texto), false, avatarAtual, horaLocal);
                 playerDiv.style.animation = 'slideUp 0.3s ease-out';
                 chatBox.appendChild(playerDiv);
                 chatBox.scrollTop = chatBox.scrollHeight;
@@ -2863,11 +2930,11 @@
 
                 // Container de resposta do Mestre
                 const aiDiv = document.createElement('div');
-                aiDiv.style.cssText = 'padding:14px 16px;border-radius:6px;background:#2a1515;border-left:4px solid var(--sangue);';
-                aiDiv.innerHTML = '<strong style="display:block;color:var(--sangue);font-family:Cinzel,serif;font-size:0.85rem;letter-spacing:1px;margin-bottom:6px;">MESTRE (IA)</strong>';
+                aiDiv.style.cssText = 'padding:14px 16px;border-radius:6px;background:#252525;border-left:3px solid #3a3a3a;';
+                aiDiv.innerHTML = '<strong style="display:block;color:#bbb;font-family:Cinzel,serif;font-size:0.85rem;letter-spacing:1px;margin-bottom:6px;">MESTRE (IA)</strong>';
                 // Área de "raciocínio" (o Mestre pensando antes de narrar)
                 const pensandoSpan = document.createElement('span');
-                pensandoSpan.style.cssText = 'color:#8a6a6a;font-family:Inter,sans-serif;font-size:13px;line-height:1.5;display:block;font-style:italic;opacity:0.75;max-height:90px;overflow:hidden;border-bottom:1px dashed #4a2a2a;padding-bottom:8px;margin-bottom:8px;';
+                pensandoSpan.style.cssText = 'color:#777;font-family:Inter,sans-serif;font-size:13px;line-height:1.5;display:block;font-style:italic;opacity:0.75;max-height:90px;overflow:hidden;border-bottom:1px dashed #333;padding-bottom:8px;margin-bottom:8px;';
                 let pensandoTexto = '';
                 aiDiv.appendChild(pensandoSpan);
 
@@ -2907,12 +2974,12 @@
                     npcTexto = '';
 
                     const div = document.createElement('div');
-                    div.style.cssText = 'padding:12px 14px;border-radius:6px;background:#1a0a0a;border-left:4px solid var(--sangue);display:flex;gap:10px;align-items:flex-start;';
+                    div.style.cssText = 'padding:12px 14px;border-radius:6px;background:#252525;border-left:3px solid #555;display:flex;gap:10px;align-items:flex-start;';
 
                     const avatarEl = criarAvatarNPCClicavel(nome);
                     const corpo = document.createElement('div');
                     corpo.style.cssText = 'flex:1;min-width:0;';
-                    corpo.innerHTML = `<strong style="display:block;color:var(--sangue);font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:2px;margin-bottom:5px;">${nome.toUpperCase()}</strong>`;
+                    corpo.innerHTML = `<strong style="display:block;color:#aaa;font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:2px;margin-bottom:5px;">${nome.toUpperCase()}</strong>`;
 
                     const span = document.createElement('span');
                     span.style.cssText = 'color:#e0d0d0;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;font-style:italic;';
