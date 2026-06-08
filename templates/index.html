@@ -1868,17 +1868,19 @@
             }).catch(() => {});
         }
 
-        function salvarAvatar(url) {
+        async function salvarAvatar(url) {
             currentAvatarUrl = url || '';
             localStorage.setItem('vtm_avatar_url', currentAvatarUrl);
             atualizarAvatarVisual(currentAvatarUrl);
-            // Salva avatar separado (via POST /avatar) — nao infla mais a ficha
+            // Salva avatar separado (via POST /avatar) — aguarda antes de salvar ficha
             if (currentAvatarUrl) {
-                fetch('/avatar', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ avatar: currentAvatarUrl })
-                }).catch(() => {});
+                try {
+                    await fetch('/avatar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ avatar: currentAvatarUrl })
+                    });
+                } catch(e) {}
             }
             salvarFichaDebounced();
         }
