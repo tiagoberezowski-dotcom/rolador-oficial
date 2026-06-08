@@ -1045,7 +1045,21 @@ Regras:
 - Coloque a tag imediatamente antes do trecho que ela modula
 - Use no máximo 2 tags por resposta, nos picos dramáticos
 - Nunca mencione ou explique as tags — elas não existem para os personagens
-- Tags sempre em inglês, mesmo com texto em português"""
+- Tags sempre em inglês, mesmo com texto em português
+
+---
+
+### J. CONCESSÃO DE XP
+
+Quando quiser conceder XP aos jogadores (final de sessão, momento dramático, conquista significativa), use esta tag **na última linha da resposta**, sem texto depois:
+
+`[XP: Lior=3, Fryderyk=3]`
+
+Regras:
+- Use apenas quando for narrativamente apropriado conceder XP (não em toda resposta)
+- Valores típicos: 1-3 XP por evento/sessão
+- Pode conceder para um ou ambos os jogadores
+- A tag é processada automaticamente — não mencione XP no texto narrativo"""
 
     # Monta a memória do chat (para a IA lembrar do que aconteceu)
     mensagens_api = [{"role": "system", "content": prompt_sistema}]
@@ -1235,6 +1249,9 @@ def stream_chat():
                 else:
                     broadcast({"tipo": "mestre_token", "delta": delta})
 
+            # Processa tag de XP antes de salvar.
+            full_response, xp_concedidos = _processar_xp_tag(full_response)
+
             # Persiste e encerra o turno.
             with _chat_lock:
                 hora = salvar_mensagem_db("Mestre (IA)", full_response)
@@ -1247,6 +1264,9 @@ def stream_chat():
 
             with _turno_lock:
                 _resetar_turno()
+
+            if xp_concedidos:
+                broadcast({"tipo": "xp_atualizado", "concedidos": xp_concedidos})
 
             broadcast({"tipo": "mestre_done"})
             yield f"data: {json.dumps({'done': True})}\n\n"
@@ -1921,6 +1941,41 @@ _DISCIPLINES = {
     'Auspex', 'Dominate', 'Obfuscate', 'Oblivion',
     'Animalism', 'Presence', 'Protean', 'Thin-Blood Alchemy',
 }
+
+
+def _processar_xp_tag(texto):
+    """Detecta [XP: Lior=N, Fryderyk=N] na resposta, concede XP e retorna texto sem a tag."""
+    match = re.search(r'\[XP:\s*([^\]]+)\]', texto, re.IGNORECASE)
+    if not match:
+        return texto, {}
+    conteudo = match.group(1)
+    concedidos = {}
+    for parte in conteudo.split(','):
+        parte = parte.strip()
+        if '=' in parte:
+            nome, valor = parte.split('=', 1)
+            nome = nome.strip()
+            try:
+                qtd = int(valor.strip())
+            except ValueError:
+                continue
+            if nome in ('Lior', 'Fryderyk') and qtd > 0:
+                with _db() as con:
+                    con.execute(
+                        '''INSERT INTO xp (jogador, disponivel, total_ganho) VALUES (?, ?, ?)
+                           ON CONFLICT(jogador) DO UPDATE SET
+                           disponivel = disponivel + excluded.disponivel,
+                           total_ganho = total_ganho + excluded.total_ganho''',
+                        (nome, qtd, qtd)
+                    )
+                    con.execute(
+                        'INSERT INTO xp_log (jogador, tipo, quantidade, descricao) VALUES (?, ?, ?, ?)',
+                        (nome, 'ganho', qtd, 'Concedido pelo Mestre (IA)')
+                    )
+                    con.commit()
+                concedidos[nome] = qtd
+    texto_limpo = re.sub(r'\s*\[XP:[^\]]+\]', '', texto).rstrip()
+    return texto_limpo, concedidos
 
 
 def _custo_xp(jogador, stat):
