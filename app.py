@@ -243,6 +243,7 @@ CONVENÇÕES DE MESA
 - Awe (Presence): ativação livre, sem Rouse
 - Cloak of Shadows, Silence of Death, Ghost in the Machine: livres
 - Unseen Passage: pede Rouse
+- Premonition: pede Rouse (pode ser narrativo se o Mestre quiser)
 - Obfuscate vs Sense the Unseen: contestado (buscador rola Wits+Auspex passivo ou Resolve+Auspex ativa vs Wits+Obfuscate do oculto; Stealth não entra)
 - Alimentação abstrata: Rebanho cobre sem rolagem; Hunger 0 exige drenar até a morte
 - [X] corta qualquer cena imediatamente"""
