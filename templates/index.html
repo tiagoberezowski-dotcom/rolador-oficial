@@ -2400,7 +2400,7 @@
             if (e.key === 'Enter') adicionarNota();
         });
 
-        /* ---------- POLLING (substituto do SSE para PythonAnywhere) ---------- */
+        /* ---------- SSE + POLLING ---------- */
         let estaRecebendoStream = false;   // true enquanto o sender processa HTTP stream
         let sseStreaming = false;           // true enquanto o receiver processa stream do Mestre
         let sseAiDiv = null;
@@ -2414,7 +2414,7 @@
 
         let pollAfterId = -1;
         let pollTimer = null;
-        let pollFastMode = false;
+        let pollFastMode = false; // mantido para compatibilidade — não usado com SSE
 
         function sseFinalizarNPC() {
             if (sseNpcDiv) {
@@ -2443,7 +2443,7 @@
             sseNpcDiv = div; sseNpcTextSpan = span;
         }
 
-        /* ---------- POLLING (substituto do SSE para PythonAnywhere) ---------- */
+        /* ---------- processarEventoPoll: trata eventos SSE e polling ---------- */
 
         function processarEventoPoll(ev) {
             const jogadorAtual = document.getElementById('jogador').value.trim();
@@ -3161,8 +3161,15 @@
         }
         pollChatLoop();
 
-        // Polling universal — funciona em qualquer hospedagem (PythonAnywhere, etc.)
-        iniciarPolling();
+        // SSE — tempo real para todos os jogadores
+        function conectarSSE() {
+            const es = new EventSource('/eventos');
+            es.onmessage = (e) => {
+                try { processarEventoPoll(JSON.parse(e.data)); } catch(err) {}
+            };
+            // EventSource reconecta automaticamente após falha
+        }
+        conectarSSE();
 
     </script>
 </body>
