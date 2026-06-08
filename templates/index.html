@@ -120,18 +120,25 @@
             box-shadow: 0 0 20px rgba(201, 169, 110, 0.35), 0 0 0 8px var(--bg);
             position: relative; cursor: pointer;
             transition: border-color 0.25s, box-shadow 0.25s;
+            background-size: cover;
         }
         .avatar-circle:hover {
             border-color: var(--ouro-claro);
             box-shadow: 0 0 28px rgba(201, 169, 110, 0.5), 0 0 0 8px var(--bg);
         }
-        .avatar-circle img {
-            width: 100%; height: 100%; object-fit: cover;
-        }
+        .avatar-circle.has-image { cursor: grab; }
+        .avatar-circle.repositioning { cursor: grabbing; }
         .avatar-placeholder {
             width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
             color: #555; font-family: 'Cinzel', serif; font-size: 0.7rem; text-align: center; padding: 10px;
         }
+        .avatar-reposition-hint {
+            position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+            font-family: 'Inter', sans-serif; font-size: 0.5rem; color: rgba(255,255,255,0.45);
+            letter-spacing: 1px; pointer-events: none; white-space: nowrap;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .avatar-circle.has-image:hover .avatar-reposition-hint { opacity: 1; }
         .avatar-upload-label {
             cursor: pointer; display: block;
         }
@@ -827,6 +834,7 @@
                 <label for="avatar-file-input" class="avatar-upload-label">
                     <div class="avatar-circle" id="avatar-visual" title="Clique para enviar avatar">
                         <div class="avatar-placeholder">Foto</div>
+                        <span class="avatar-reposition-hint">ARRASTE</span>
                     </div>
                 </label>
             </div>
@@ -2258,11 +2266,19 @@
         }
 
         function atualizarAvatarVisual(url) {
-            const avatarEl = document.getElementById('avatar-visual');
+            const el = document.getElementById('avatar-visual');
             if (url && (url.startsWith('http') || url.startsWith('data:'))) {
-                avatarEl.innerHTML = `<img src="${url}" alt="Avatar" onerror="this.parentElement.innerHTML='<div class=avatar-placeholder>Foto</div>'">`;
+                el.style.backgroundImage = 'url(' + url + ')';
+                el.style.backgroundPosition = avatarOffsetX + '% ' + avatarOffsetY + '%';
+                el.classList.add('has-image');
+                const ph = el.querySelector('.avatar-placeholder');
+                if (ph) ph.style.display = 'none';
             } else {
-                avatarEl.innerHTML = '<div class="avatar-placeholder">Foto</div>';
+                el.style.backgroundImage = '';
+                el.classList.remove('has-image');
+                const ph = el.querySelector('.avatar-placeholder');
+                if (ph) ph.style.display = '';
+                avatarOffsetX = 50; avatarOffsetY = 50;
             }
         }
 
@@ -2270,6 +2286,14 @@
 
         function _salvarCapaOffset() {
             localStorage.setItem(_lsKey('capa_offset'), Math.round(capaOffsetY));
+        }
+
+        let avatarOffsetX = parseInt(localStorage.getItem(_lsKey('avatar_offset_x')) || '50', 10);
+        let avatarOffsetY = parseInt(localStorage.getItem(_lsKey('avatar_offset_y')) || '50', 10);
+
+        function _salvarAvatarOffset() {
+            localStorage.setItem(_lsKey('avatar_offset_x'), Math.round(avatarOffsetX));
+            localStorage.setItem(_lsKey('avatar_offset_y'), Math.round(avatarOffsetY));
         }
 
         function atualizarCapaVisual(url) {
@@ -2408,6 +2432,68 @@
             });
         })();
 
+        (function initAvatarDrag() {
+            let dragging = false, dragged = false;
+            let startX = 0, startY = 0, startOX = 50, startOY = 50;
+            const el = document.getElementById('avatar-visual');
+            const fileInput = document.getElementById('avatar-file-input');
+            if (!el || !fileInput) return;
+
+            function applyOffset(ox, oy) {
+                avatarOffsetX = Math.max(0, Math.min(100, ox));
+                avatarOffsetY = Math.max(0, Math.min(100, oy));
+                el.style.backgroundPosition = avatarOffsetX + '% ' + avatarOffsetY + '%';
+                _salvarAvatarOffset();
+            }
+
+            el.addEventListener('mousedown', function(e) {
+                if (!el.classList.contains('has-image')) return;
+                dragging = true; dragged = false;
+                startX = e.clientX; startY = e.clientY;
+                startOX = avatarOffsetX; startOY = avatarOffsetY;
+                el.classList.add('repositioning');
+                e.preventDefault();
+            });
+            window.addEventListener('mousemove', function(e) {
+                if (!dragging) return;
+                const dx = e.clientX - startX, dy = e.clientY - startY;
+                if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragged = true;
+                applyOffset(startOX + (dx / el.offsetWidth) * 100,
+                            startOY + (dy / el.offsetHeight) * 100);
+            });
+            window.addEventListener('mouseup', function() {
+                if (!dragging) return;
+                dragging = false;
+                el.classList.remove('repositioning');
+                if (!dragged) fileInput.click();
+            });
+
+            el.addEventListener('touchstart', function(e) {
+                if (!el.classList.contains('has-image')) return;
+                const t = e.touches[0];
+                dragging = true; dragged = false;
+                startX = t.clientX; startY = t.clientY;
+                startOX = avatarOffsetX; startOY = avatarOffsetY;
+                el.classList.add('repositioning');
+                e.preventDefault();
+            }, {passive: false});
+            window.addEventListener('touchmove', function(e) {
+                if (!dragging) return;
+                const t = e.touches[0];
+                const dx = t.clientX - startX, dy = t.clientY - startY;
+                if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragged = true;
+                applyOffset(startOX + (dx / el.offsetWidth) * 100,
+                            startOY + (dy / el.offsetHeight) * 100);
+                e.preventDefault();
+            }, {passive: false});
+            window.addEventListener('touchend', function() {
+                if (!dragging) return;
+                dragging = false;
+                el.classList.remove('repositioning');
+                if (!dragged) fileInput.click();
+            });
+        })();
+
         function processarUploadAvatar(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -2416,7 +2502,8 @@
             reader.onload = (e) => {
                 const img = new Image();
                 img.onload = () => {
-                    const MAX = 300;
+                    // 600px mantém qualidade suficiente e dá margem para reposicionar
+                    const MAX = 600;
                     let w = img.width, h = img.height;
                     if (w > MAX || h > MAX) {
                         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -2424,8 +2511,13 @@
                     }
                     const canvas = document.createElement('canvas');
                     canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    const ctx = canvas.getContext('2d');
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    // Resetar offset para centro ao trocar foto
+                    avatarOffsetX = 50; avatarOffsetY = 50; _salvarAvatarOffset();
                     atualizarAvatarVisual(dataUrl);
                     salvarAvatar(dataUrl);
                 };
