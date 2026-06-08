@@ -2043,6 +2043,56 @@ def limpar_chat():
     return jsonify({'status': 'ok'})
 
 
+SYSTEM_CONSULTA_OOC = """Você é o Narrador da Crônica de Varsóvia (VTM 5E), respondendo fora do jogo (OOC — Out of Character).
+
+Responda de forma direta e útil sobre: regras V5, histórico de NPCs que o personagem pode ou não conhecer, situações mecânicas, esclarecimentos de cena, dúvidas sobre o mundo, etc.
+
+Seja conciso. Máximo 3 parágrafos. Não use formatação markdown — escreva em prosa simples.
+NÃO narre em prosa de ficção. NÃO avance a trama. NÃO tome decisões pelo personagem.
+Se a pergunta envolver algo que o personagem definitivamente não saberia (informação que nunca teve acesso), diga isso claramente.
+
+Personagem consultando: {nome} ({cla})
+"""
+
+
+@app.route('/consulta_mestre', methods=['POST'])
+@login_required
+def consulta_mestre():
+    data = request.get_json(silent=True) or {}
+    pergunta = data.get('pergunta', '').strip()
+    if not pergunta:
+        return jsonify({'erro': 'Pergunta vazia'}), 400
+
+    jogador = session['jogador']
+    with _db() as con:
+        row = con.execute('SELECT dados FROM fichas WHERE jogador = ?', (jogador,)).fetchone()
+    dados = json.loads(row[0]) if row and row[0] else {}
+    nome = dados.get('nome', jogador)
+    cla = dados.get('cla', '?')
+
+    system = SYSTEM_CONSULTA_OOC.format(nome=nome, cla=cla)
+    canon = obter_canon()
+    if canon:
+        system = system + '\n\n=== CÂNONE DA CRÔNICA ===\n' + canon
+
+    try:
+        resp = get_client().chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": pergunta}
+            ],
+            max_tokens=600,
+            temperature=0.4
+        )
+        return jsonify({
+            'resposta': resp.choices[0].message.content,
+            'modelo': 'V4L'
+        })
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+
 @app.route('/resumo_sessao', methods=['POST'])
 @login_required
 def resumo_sessao():

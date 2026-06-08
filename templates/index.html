@@ -235,25 +235,56 @@
             .personagem-nome { font-size: 1.2rem; letter-spacing: 2px; }
             .personagem-info { font-size: 0.78rem; }
 
-            /* Trackers — scroll horizontal se não couber */
+            /* Trackers — grade 2×2 para os 4 stats principais + faixa BANE/RESONANCE */
             .personagem-trackers {
-                gap: 8px;
-                overflow-x: auto;
-                justify-content: flex-start;
-                padding: 4px 6px 6px;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: none;
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 8px !important;
+                overflow-x: visible !important;
+                padding: 4px 0 6px !important;
+                justify-items: center;
             }
-            .personagem-trackers::-webkit-scrollbar { display: none; }
+            .personagem-badge-sep { display: none !important; }
+            /* BANE e RESONANCE lado a lado na última linha */
+            .personagem-badge.badge-bane    { grid-column: 1; }
+            .personagem-badge.badge-resonance { grid-column: 2; }
             .personagem-badge-label { font-size: 0.48rem; }
             .personagem-badge-valor { font-size: 0.82rem; }
+            /* Gotas de fome menores para caber */
+            .gotas { gap: 5px; flex-wrap: wrap; justify-content: center; max-width: 90px; }
+            .gota-fome { width: 20px; height: 20px; }
+            .gota-fome i { width: 13px; height: 13px; }
 
-            /* Action panel — menos padding */
-            .action-panel { padding: 12px 10px; border-radius: 8px; bottom: 6px; }
-            .info-row { gap: 8px; }
-            .info-row input, .info-row select { padding: 10px 8px; font-size: 0.88rem; }
-            .btns-acao { gap: 6px; }
-            .btn { font-size: 0.78rem !important; padding: 9px 8px !important; letter-spacing: 1px !important; }
+            /* Action panel — estático no mobile (aparece ao rolar a página) */
+            .action-panel { padding: 10px 8px; border-radius: 8px; bottom: 6px; position: static !important; }
+            .info-row {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+                margin-bottom: 8px;
+            }
+            /* PERSONAGEM e EXPERIENCE ocupam linha inteira */
+            .info-row > div:first-child { grid-column: 1 / -1; }
+            .info-row > div:last-child  { grid-column: 1 / -1; }
+            .info-row input, .info-row select {
+                padding: 7px 6px;
+                font-size: 0.82rem;
+            }
+            .label-pequena { font-size: 0.6rem; margin-bottom: 2px; }
+
+            /* Botões: 2 por linha */
+            .btns-acao {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            /* Ordem: LIMPAR | USAR PODER / BLOOD SURGE | ROUSE / ROLAR (linha inteira) */
+            .btns-acao .btn-clear  { order: 1; }
+            .btns-acao .btn-poder  { order: 2; }
+            .btns-acao .btn-surge  { order: 3; }
+            .btns-acao #btn-rouse  { order: 4; }
+            .btns-acao #btn-rolar  { order: 5; grid-column: 1 / -1; }
+            .btn { font-size: 0.75rem !important; padding: 10px 6px !important; letter-spacing: 0.5px !important; }
 
             /* Resultado de rolagem */
             .resultado-card { padding: 14px 10px; margin: 10px 0; }
@@ -439,21 +470,7 @@
         }
         .btn-confirmar:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .btn-cancelar-acao {
-            width: 100%;
-            background: transparent;
-            border: 1px solid #444;
-            color: #777;
-            margin-top: 8px;
-            padding: 8px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-family: 'Cinzel', serif;
-            font-size: 0.75rem;
-            letter-spacing: 2px;
-            transition: 0.2s;
-        }
-        .btn-cancelar-acao:hover { background: #1a1a1a; color: #aaa; border-color: #666; }
+        .btn-cancelar-acao { display: none !important; }
 
         /* ----- Disciplines Expandíveis ----- */
         .disc-wrap { margin-bottom: 2px; }
@@ -534,15 +551,46 @@
         .poder-row.poder-ativo .poder-btn-rolar { background: var(--ouro); color: #000; border-color: var(--ouro); }
 
         .aviso-acao-pendente {
-            display: block;
-            margin-top: 10px;
-            padding: 8px 12px;
-            background: rgba(179, 0, 27, 0.08);
-            border-left: 2px solid var(--sangue);
-            color: #c89090;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-top: 16px;
+            padding: 12px 14px;
+            background: transparent;
+            border: none;
+            border-left: 2px solid rgba(197, 153, 83, 0.35);
+            border-radius: 0;
+            color: #c8a96e;
             font-family: 'Crimson Text', serif;
-            font-size: 0.85rem;
+            font-size: 1rem;
             font-style: italic;
+            line-height: 1.6;
+            animation: aviso-fade-in 0.4s ease;
+        }
+        .aviso-acao-pendente .aviso-icon {
+            flex-shrink: 0;
+            font-size: 1rem;
+            color: var(--ouro);
+            opacity: 0.6;
+            margin-top: 2px;
+            line-height: 1;
+        }
+        .aviso-acao-pendente .aviso-texto {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .aviso-acao-pendente .aviso-titulo {
+            font-style: normal;
+            font-family: 'Cinzel', serif;
+            font-size: 0.62rem;
+            letter-spacing: 2px;
+            color: rgba(197, 153, 83, 0.5);
+            text-transform: uppercase;
+        }
+        @keyframes aviso-fade-in {
+            from { opacity: 0; transform: translateY(-4px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
         /* ----- Configurações de Personagem ----- */
@@ -587,8 +635,50 @@
         .hist-card { border: 1px solid var(--borda-ouro); background: #0d0d0d; border-radius: 10px; padding: 20px; margin-bottom: 25px; }
         .hist-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid #333; padding-bottom: 8px; }
         .hist-header h2 { font-family: 'Cinzel', serif; color: var(--ouro); font-size: 1.15rem; letter-spacing: 3px; margin: 0;}
-        .historico-texto { font-family: 'Crimson Text', serif; font-size: 1.05rem; color: #cfc2ac; line-height: 1.6;}
-        .hist-item { background: #161616; padding: 12px; border-radius: 6px; margin-bottom: 12px; border-left: 3px solid var(--borda-ouro); }
+        .historico-texto { font-family: 'Crimson Text', serif; font-size: 1.05rem; color: #cfc2ac; line-height: 1.6; position: relative; }
+        .hist-item { background: #161616; padding: 12px; border-radius: 6px; margin-bottom: 12px; border-left: 3px solid var(--borda-ouro); transition: opacity 0.2s; }
+        /* Consulta OOC */
+        .hist-item.consulta-ooc { background: #0f0f18; border-left: 3px solid #4a4a8a; opacity: 0.88; }
+        .consulta-ooc-header { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+        .consulta-badge { font-family: 'Cinzel', serif; font-size: 0.45rem; letter-spacing: 2px; color: #6a6aaa; background: rgba(74,74,138,0.15); border: 1px solid rgba(74,74,138,0.3); border-radius: 3px; padding: 2px 6px; }
+        .consulta-autor { font-family: 'Cinzel', serif; font-size: 0.55rem; color: #8888bb; letter-spacing: 1px; }
+        .consulta-model { font-size: 0.45rem; color: #5555aa; letter-spacing: 1px; }
+        .hist-item.consulta-ooc p { color: #a0a0c0; font-style: italic; margin: 4px 0 0; font-family: 'Inter', sans-serif; font-size: 0.88rem; line-height: 1.5; }
+        /* Hint do comando /mestre */
+        .chat-hint { font-family: 'Inter', sans-serif; font-size: 0.68rem; color: rgba(197,153,83,0.6); letter-spacing: 0.5px; user-select: none; display: flex; align-items: center; gap: 5px; }
+        .chat-hint kbd { font-family: 'Courier New', monospace; font-size: 0.68rem; background: rgba(197,153,83,0.12); border: 1px solid rgba(197,153,83,0.35); border-radius: 3px; padding: 1px 6px; color: rgba(197,153,83,0.85); font-weight: 600; }
+        /* Acordeão — recolhido: só o primeiro item visível */
+        .hist-collapsed .hist-item:not(:first-child) { display: none; }
+        .hist-collapsed .hist-fade {
+            display: block;
+            height: 40px;
+            background: linear-gradient(to bottom, transparent, #0d0d0d);
+            margin-top: -40px;
+            position: relative;
+            pointer-events: none;
+            border-radius: 0 0 6px 6px;
+        }
+        .hist-fade { display: none; }
+        /* Botão toggle */
+        .hist-toggle {
+            display: flex; align-items: center; gap: 5px;
+            background: transparent;
+            border: 1px solid rgba(197,153,83,0.25);
+            border-radius: 4px;
+            color: rgba(197,153,83,0.7);
+            font-family: 'Cinzel', serif;
+            font-size: 0.52rem;
+            letter-spacing: 1.5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            transition: border-color 0.2s, color 0.2s, background 0.2s;
+            white-space: nowrap;
+        }
+        .hist-toggle:hover { border-color: var(--ouro); color: var(--ouro); background: rgba(197,153,83,0.06); }
+        .hist-toggle-chevron { font-size: 0.65rem; transition: transform 0.25s; }
+        .hist-toggle.expandido .hist-toggle-chevron { transform: rotate(180deg); }
+        /* Ações do header agrupadas */
+        .hist-header-actions { display: flex; align-items: center; gap: 8px; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         .cursor-streaming { display: inline-block; width: 2px; height: 1em; background: #666; animation: blink 0.7s step-end infinite; vertical-align: text-bottom; margin-left: 1px; }
 
@@ -781,11 +871,6 @@
         }
         #chat-card #chat-input::placeholder { color: #555; }
 
-        #chat-card .chat-submit-btn {
-            background: #333;
-            color: #aaa;
-        }
-        #chat-card .chat-submit-btn:hover { background: #444; color: #fff; }
 
         #chat-card .mestre-typing {
             background: #242424;
@@ -823,38 +908,63 @@
             align-items: center;
             gap: 8px;
             margin-top: 10px;
-            padding: 6px 0 2px;
+            padding: 7px 10px;
+            background: rgba(0,0,0,0.35);
+            border: 1px solid rgba(197,153,83,0.18);
+            border-radius: 6px;
         }
         .tts-btn {
-            width: 26px; height: 26px;
+            width: 30px; height: 30px;
             border-radius: 50%;
-            border: 1px solid var(--borda-ouro);
-            background: none;
+            border: 1.5px solid rgba(197,153,83,0.55);
+            background: rgba(197,153,83,0.08);
             color: var(--ouro);
-            font-size: 11px;
+            font-size: 12px;
             cursor: pointer;
             display: flex; align-items: center; justify-content: center;
             flex-shrink: 0;
-            transition: background 0.2s, border-color 0.2s;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
             padding: 0;
         }
-        .tts-btn:hover { background: rgba(201,169,110,0.12); border-color: var(--ouro); }
-        .tts-btn:disabled { opacity: 0.35; cursor: default; }
+        .tts-btn:hover { background: rgba(197,153,83,0.2); border-color: var(--ouro); }
+        .tts-btn:disabled { opacity: 0.3; cursor: default; }
+        /* botão parar (■) fica vermelho quando tocando */
+        .tts-player.tocando .tts-btn-stop {
+            border-color: rgba(200,60,60,0.7);
+            color: #c83c3c;
+            background: rgba(200,60,60,0.1);
+        }
+        .tts-player.tocando .tts-btn-stop:hover {
+            background: rgba(200,60,60,0.22);
+            border-color: #c83c3c;
+        }
         .tts-track-wrap {
             display: none;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             flex: 1;
             min-width: 0;
         }
         .tts-player.tocando .tts-track-wrap { display: flex; }
         .tts-track {
             flex: 1;
-            height: 2px;
-            background: #333;
-            border-radius: 2px;
+            height: 4px;
+            background: rgba(255,255,255,0.12);
+            border-radius: 4px;
             cursor: pointer;
             position: relative;
+            /* área de clique maior sem afetar visual */
+            padding: 8px 0;
+            margin: -8px 0;
+            box-sizing: content-box;
+        }
+        .tts-track-inner {
+            position: absolute;
+            left: 0; right: 0;
+            top: 50%; transform: translateY(-50%);
+            height: 4px;
+            background: rgba(255,255,255,0.12);
+            border-radius: 4px;
             overflow: hidden;
         }
         .tts-progress {
@@ -862,16 +972,23 @@
             background: var(--ouro);
             width: 0%;
             transition: width 0.25s linear;
+            border-radius: 4px;
         }
         .tts-time {
-            color: #666;
+            color: rgba(197,153,83,0.75);
             font-family: Inter, sans-serif;
             font-size: 11px;
             white-space: nowrap;
             flex-shrink: 0;
+            min-width: 72px;
+            text-align: right;
+        }
+        .tts-btn-pause {
+            border-color: rgba(197,153,83,0.45);
+            font-size: 13px;
         }
         @keyframes tts-pulse {
-            0%, 100% { opacity: 1; } 50% { opacity: 0.35; }
+            0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
         }
         .tts-btn.carregando { animation: tts-pulse 1s ease-in-out infinite; }
     </style>
@@ -946,12 +1063,12 @@
                     </div>
                 </div>
                 <span class="personagem-badge-sep"></span>
-                <div class="personagem-badge">
+                <div class="personagem-badge badge-bane">
                     <span class="personagem-badge-label">BANE</span>
                     <span class="personagem-badge-sub" style="font-size:0.62rem; color:var(--ouro-claro); opacity:0.8; max-width:140px; text-align:center; line-height:1.2;">{{ bane }}</span>
                 </div>
                 <span class="personagem-badge-sep"></span>
-                <div class="personagem-badge">
+                <div class="personagem-badge badge-resonance">
                     <span class="personagem-badge-label">RESONANCE</span>
                     <span class="personagem-badge-sub" style="font-size:0.62rem; color:var(--ouro-claro); opacity:0.8;">{{ resonance }}</span>
                 </div>
@@ -973,15 +1090,27 @@
             <button class="btn-wp" id="btn-reroll" style="display:none;" onclick="gastarWillpower()"></button>
             <button class="btn-confirmar" id="btn-confirmar" style="display:none;" onclick="confirmarAcao()">☥ CONFIRMAR AÇÃO E ENVIAR AO MESTRE</button>
             <button class="btn-cancelar-acao" id="btn-cancelar-acao" style="display:none;" onclick="cancelarAcao()">CANCELAR AÇÃO</button>
-            <span class="aviso-acao-pendente" id="aviso-acao-pendente" style="display:none;">Descreva a ação no campo do chat abaixo, ou confirme para ser perguntado.</span>
+            <div class="aviso-acao-pendente" id="aviso-acao-pendente" style="display:none;">
+                <span class="aviso-icon">☽</span>
+                <span class="aviso-texto">
+                    <span class="aviso-titulo">Próximo passo</span>
+                    Descreva a ação na Mesa Virtual (Chat) ou confirme para abrir um pop-up.
+                </span>
+            </div>
         </div>
 
         <div class="hist-card">
             <div class="hist-header">
                 <h2>HISTÓRICO DA MESA</h2>
-                <button class="btn-clear" id="btn-copiar" style="display:none; flex:0; padding: 6px 12px; margin-left:15px; border-color:var(--ouro); color:var(--ouro);" onclick="copiarUltimaJogada()">COPIAR ÚLTIMA</button>
+                <div class="hist-header-actions">
+                    <button class="btn-clear" id="btn-copiar" style="display:none; flex:0; padding: 6px 12px; border-color:var(--ouro); color:var(--ouro);" onclick="copiarUltimaJogada()">COPIAR ÚLTIMA</button>
+                    <button class="hist-toggle" id="hist-toggle" onclick="toggleHistorico()" style="display:none;">
+                        <span class="hist-toggle-chevron">▾</span>
+                        <span id="hist-toggle-txt">VER TODOS</span>
+                    </button>
+                </div>
             </div>
-            <div id="historico-texto" class="historico-texto">Nenhuma rolagem ainda.</div>
+            <div id="historico-texto" class="historico-texto hist-collapsed">Nenhuma rolagem ainda.</div>
         </div>
 
 <!-- CHAT DO RPG -->
@@ -1114,7 +1243,7 @@
                     <button class="chat-submit-btn" id="chat-submit-btn" onclick="enviarMensagemChat()" title="Enviar (Enter)">†</button>
                 </div>
                 <div class="chat-input-footer">
-                    <span id="dica-input" style="color: #666; font-size: 0.7rem;">Shift + Enter = nova linha</span>
+                    <span class="chat-hint">⬡ consulta fora do jogo: <kbd>/mestre</kbd> sua pergunta</span>
                     <span id="contador-chars">0/1190</span>
                 </div>
             </div>
@@ -1935,8 +2064,10 @@
                 esconderBotoesAcaoPendente();
             }
 
-            document.getElementById('resultado-card').style.display = 'block';
-            document.getElementById('resultado-card').className = 'resultado-card mood-neutro';
+            const _resCard = document.getElementById('resultado-card');
+            _resCard.style.display = 'block';
+            _resCard.className = 'resultado-card mood-neutro';
+            setTimeout(() => _resCard.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
             const vazio = document.getElementById('resultado-vazio');
             if (vazio) { vazio.style.display = 'none'; }
 
@@ -2107,7 +2238,9 @@
                 if (!resp.ok || data.erro) { alert(data.erro); return; }
 
                 iniciarAnimacaoPainel();
-                document.getElementById('resultado-card').className = 'resultado-card mood-' + (data.rouse.sucesso ? 'sucesso' : 'messy');
+                const _rouseCard = document.getElementById('resultado-card');
+                _rouseCard.className = 'resultado-card mood-' + (data.rouse.sucesso ? 'sucesso' : 'messy');
+                setTimeout(() => _rouseCard.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
                 document.getElementById('resultado-topo').textContent = 'Rouse Check (Manual)';
                 document.getElementById('resultado-sub').innerHTML = '<span class="sub-desc">' + (data.rouse.sucesso ? 'A Besta dorme.' : 'A sua fome aumentou.') + '</span>';
 
@@ -2271,12 +2404,35 @@
                     return;
                 }
 
-                cont.innerHTML = window.historicoAtual.map(j => formatarEntradaHistorico(j, false)).join('');
+                cont.innerHTML = window.historicoAtual.map(j => formatarEntradaHistorico(j, false)).join('')
+                    + '<span class="hist-fade"></span>';
                 btnCopiar.style.display = 'block';
+
+                // Atualiza botão toggle
+                const btnToggle = document.getElementById('hist-toggle');
+                const txtToggle = document.getElementById('hist-toggle-txt');
+                const n = window.historicoAtual.length;
+                btnToggle.style.display = n > 1 ? 'flex' : 'none';
+                // Se estava expandido, mantém expandido; senão mantém recolhido
+                if (!cont.classList.contains('hist-collapsed')) {
+                    txtToggle.textContent = 'RECOLHER';
+                } else {
+                    txtToggle.textContent = 'VER TODOS (' + n + ')';
+                }
 
             } catch (e) {}
         }
         setInterval(carregarHistorico, 10000);
+
+        function toggleHistorico() {
+            const cont = document.getElementById('historico-texto');
+            const btn = document.getElementById('hist-toggle');
+            const txt = document.getElementById('hist-toggle-txt');
+            const collapsed = cont.classList.toggle('hist-collapsed');
+            btn.classList.toggle('expandido', !collapsed);
+            const n = (window.historicoAtual || []).length;
+            txt.textContent = collapsed ? 'VER TODOS (' + n + ')' : 'RECOLHER';
+        }
 
         async function copiarUltimaJogada() {
             if (!window.historicoAtual || window.historicoAtual.length === 0) return;
@@ -2776,24 +2932,29 @@
             player.className = 'tts-player';
 
             const btnPlay = document.createElement('button');
-            btnPlay.className = 'tts-btn';
+            btnPlay.className = 'tts-btn tts-btn-stop';
             btnPlay.title = 'Ouvir narração';
             btnPlay.textContent = '▶';
 
             const trackWrap = document.createElement('div');
             trackWrap.className = 'tts-track-wrap';
+
             const track = document.createElement('span');
             track.className = 'tts-track';
+            const trackInner = document.createElement('span');
+            trackInner.className = 'tts-track-inner';
             const progress = document.createElement('span');
             progress.className = 'tts-progress';
-            track.appendChild(progress);
+            trackInner.appendChild(progress);
+            track.appendChild(trackInner);
+
             const timeLabel = document.createElement('span');
             timeLabel.className = 'tts-time';
             trackWrap.appendChild(track);
             trackWrap.appendChild(timeLabel);
 
             const btnPause = document.createElement('button');
-            btnPause.className = 'tts-btn';
+            btnPause.className = 'tts-btn tts-btn-pause';
             btnPause.title = 'Pausar / Continuar';
             btnPause.textContent = '⏸';
             btnPause.style.display = 'none';
@@ -2837,6 +2998,15 @@
             btnPlay.classList.add('carregando');
             btnPlay.disabled = true;
 
+            // iOS Safari exige que Audio() e play() sejam chamados ANTES de qualquer await,
+            // dentro do contexto síncrono do gesto do usuário. Criamos o objeto agora e
+            // chamamos play() com src vazio — o browser "libera" a permissão de áudio.
+            const audio = new Audio();
+            audio.preload = 'auto';
+            // Silencia o erro esperado de src vazio no iOS
+            const _playPromise = audio.play().catch(() => {});
+            _audioAtual = { audio, player };
+
             let token;
             try {
                 const resp = await fetch('/tts', {
@@ -2848,23 +3018,31 @@
                 const d = await resp.json();
                 token = d.token;
             } catch(e) {
+                audio.pause();
                 btnPlay.classList.remove('carregando');
                 btnPlay.disabled = false;
                 btnPlay.textContent = '✗';
                 setTimeout(() => { btnPlay.textContent = '▶'; }, 3000);
+                _audioAtual = null;
                 return;
             }
 
-            // Cria elemento de áudio apontando para o stream
-            const audio = new Audio('/tts/audio/' + token);
-            _audioAtual = { audio, player };
+            // Agora seta o src real — o browser já tem permissão de reprodução
+            audio.src = '/tts/audio/' + token;
+            audio.load();
 
             // Atualiza progresso
             audio.addEventListener('timeupdate', () => {
-                if (!audio.duration) return;
-                const pct = (audio.currentTime / audio.duration) * 100;
-                progressEl.style.width = pct + '%';
-                timeLabel.textContent = _fmtTempo(audio.currentTime) + ' / ' + _fmtTempo(audio.duration);
+                const dur = audio.duration;
+                const cur = audio.currentTime;
+                if (isFinite(dur) && dur > 0) {
+                    progressEl.style.width = (cur / dur * 100) + '%';
+                    timeLabel.textContent = _fmtTempo(cur) + ' / ' + _fmtTempo(dur);
+                } else {
+                    // duração ainda desconhecida (streaming) — só mostra tempo corrido
+                    progressEl.style.width = '0%';
+                    timeLabel.textContent = _fmtTempo(cur);
+                }
             });
 
             audio.addEventListener('canplay', () => {
@@ -2917,11 +3095,14 @@
                 else { audio.pause(); btnPause.textContent = '▶'; }
             };
 
-            // Seek por clique na track
-            progressEl.parentElement.onclick = (e) => {
+            // Seek por clique na track (área clicável maior, cálculo no inner)
+            const trackEl = progressEl.parentElement.parentElement; // .tts-track
+            trackEl.onclick = (e) => {
                 if (!audio.duration) return;
-                const rect = progressEl.parentElement.getBoundingClientRect();
-                audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+                const inner = progressEl.parentElement; // .tts-track-inner
+                const rect = inner.getBoundingClientRect();
+                const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                audio.currentTime = pct * audio.duration;
             };
         }
 
@@ -2929,7 +3110,7 @@
         function mostrarBotoesAcaoPendente() {
             document.getElementById('btn-confirmar').style.display = 'block';
             document.getElementById('btn-cancelar-acao').style.display = 'block';
-            document.getElementById('aviso-acao-pendente').style.display = 'block';
+            document.getElementById('aviso-acao-pendente').style.display = 'flex';
         }
 
         function esconderBotoesAcaoPendente() {
@@ -2938,12 +3119,9 @@
             document.getElementById('aviso-acao-pendente').style.display = 'none';
         }
 
-        function cancelarAcao() {
-            if (!confirm('Cancelar esta ação? Os dados serão descartados e o Mestre não saberá da rolagem.')) return;
-            acaoPendente = null;
-            esconderBotoesAcaoPendente();
-            document.getElementById('resultado-card').style.display = 'none';
-        }
+        // cancelarAcao removida: toda rolagem é obrigatoriamente enviada ao Mestre.
+        // Manter stub vazio para não quebrar chamadas legadas no HTML.
+        function cancelarAcao() { /* desabilitado */ }
 
         let _resolveModalInput = null;
 
@@ -3722,11 +3900,49 @@
             enviarMensagemChat(true);
         }
 
+        async function enviarConsultaMestre(pergunta) {
+            adicionarMensagemConsulta('jogador', pergunta, null);
+            try {
+                const resp = await fetch('/consulta_mestre', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({pergunta})
+                });
+                const d = await resp.json();
+                if (d.erro) { adicionarMensagemConsulta('mestre', 'Erro: ' + d.erro, 'ERR'); }
+                else { adicionarMensagemConsulta('mestre', d.resposta, d.modelo); }
+            } catch(e) {
+                adicionarMensagemConsulta('mestre', 'Erro de conexão: ' + e.message, 'ERR');
+            }
+        }
+
+        function adicionarMensagemConsulta(tipo, texto, modelo) {
+            const hist = document.getElementById('historico-texto');
+            // Limpa placeholder inicial se existir
+            if (hist.textContent.trim() === 'Nenhuma rolagem ainda.') hist.innerHTML = '';
+            const div = document.createElement('div');
+            div.className = 'hist-item consulta-ooc';
+            const modelLabel = modelo ? ` <span class="consulta-model">(${modelo})</span>` : '';
+            const autorLabel = tipo === 'mestre' ? `Mestre${modelLabel}` : 'Você';
+            div.innerHTML = `<div class="consulta-ooc-header"><span class="consulta-badge">⬡ OOC</span><span class="consulta-autor">${autorLabel}</span></div><p>${texto.replace(/\n/g, '<br>')}</p>`;
+            hist.insertBefore(div, hist.firstChild);
+        }
+
         async function enviarMensagemChat(forcar = false) {
             const input = document.getElementById('chat-input');
             const submitBtn = document.getElementById('chat-submit-btn');
             const texto = input.value.trim();
             if (!forcar && !texto) return;
+
+            // Comando /mestre — consulta OOC, não envia para o jogo
+            if (!forcar && /^\/mestre\s+/i.test(texto)) {
+                const pergunta = texto.replace(/^\/mestre\s+/i, '').trim();
+                input.value = '';
+                input.style.height = 'auto';
+                autoExpandTextarea();
+                enviarConsultaMestre(pergunta);
+                return;
+            }
 
             input.disabled = true;
             input.style.opacity = '0.5';
