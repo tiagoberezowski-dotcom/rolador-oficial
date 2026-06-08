@@ -240,10 +240,11 @@ RELÓGIOS
 CONVENÇÕES DE MESA
 - Termos de jogo em inglês (Attributes, Skills, Disciplines)
 - Narrador define reservas e dificuldades; JOGADORES rolam e informam o resultado
-- Awe (Presence): ativação livre, sem Rouse
-- Cloak of Shadows, Silence of Death, Ghost in the Machine: livres
-- Unseen Passage: pede Rouse
-- Premonition: livre ou Rouse Check (a critério do Mestre)
+- Awe, Daunt (Presence): ativação livre, sem Rouse
+- Cloak of Shadows, Silence of Death, Ghost in the Machine, Compel (Dominate): livres
+- Sense the Unseen (Auspex): livre
+- Unseen Passage, Entrancement, Reveal Temperament, Premonition: pedem Rouse
+- Premonition: alternativamente pode ser livre (a critério do Mestre)
 - Obfuscate vs Sense the Unseen: contestado (buscador rola Wits+Auspex passivo ou Resolve+Auspex ativa vs Wits+Obfuscate do oculto; Stealth não entra)
 - Alimentação abstrata: Rebanho cobre sem rolagem; Hunger 0 exige drenar até a morte
 - [X] corta qualquer cena imediatamente"""
