@@ -131,65 +131,113 @@
             margin-top: 4px;
         }
 
-        /* Campo de senha */
-        .campo-senha {
+        /* PIN */
+        .campo-pin {
             width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
             display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
         }
 
-        .campo-senha.visivel { display: flex; }
+        .campo-pin.visivel { display: flex; }
 
-        .campo-senha label {
+        .pin-label {
             font-family: 'Cinzel', serif;
-            font-size: 0.75rem;
-            letter-spacing: 2px;
-            color: #777;
-            text-align: center;
-        }
-
-        .campo-senha input[type="password"] {
-            width: 100%;
-            background: #000;
-            border: 1px solid var(--borda-ouro);
-            color: var(--ouro);
-            border-radius: 5px;
-            padding: 14px;
-            font-family: 'Cinzel', serif;
-            font-size: 1rem;
-            text-align: center;
-            letter-spacing: 4px;
-        }
-
-        .campo-senha input[type="password"]:focus {
-            outline: none;
-            border-color: var(--ouro-claro);
-        }
-
-        .btn-entrar {
-            width: 100%;
-            background: var(--sangue);
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            padding: 14px;
-            font-family: 'Cinzel', serif;
-            font-size: 1rem;
+            font-size: 0.7rem;
             letter-spacing: 3px;
-            cursor: pointer;
-            transition: 0.2s;
+            color: #666;
+            text-align: center;
         }
 
-        .btn-entrar:hover { background: #d4001f; }
+        /* 4 pontos */
+        .pin-dots {
+            display: flex;
+            gap: 18px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pin-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 1px solid var(--borda-ouro);
+            background: transparent;
+            transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .pin-dot.preenchido {
+            background: var(--ouro);
+            border-color: var(--ouro-claro);
+            box-shadow: 0 0 6px rgba(201,169,110,0.5);
+        }
+
+        /* Input invisível mas focável */
+        .pin-input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+            width: 1px;
+            height: 1px;
+        }
+
+        /* Shake no erro */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%       { transform: translateX(-8px); }
+            40%       { transform: translateX(8px); }
+            60%       { transform: translateX(-6px); }
+            80%       { transform: translateX(6px); }
+        }
+
+        .pin-dots.shake { animation: shake 0.4s ease; }
+
+        /* Dots vermelhos no erro */
+        .pin-dots.erro .pin-dot.preenchido {
+            background: var(--sangue);
+            border-color: #ff3a3a;
+            box-shadow: 0 0 6px rgba(179,0,27,0.6);
+        }
 
         .erro {
             color: #ff5a5a;
             font-family: 'Cinzel', serif;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             letter-spacing: 1px;
             text-align: center;
+        }
+
+        /* Bloqueio */
+        .bloqueio-box {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            display: none;
+        }
+
+        .bloqueio-box.visivel { display: flex; }
+
+        .bloqueio-icone {
+            font-size: 2rem;
+            color: var(--sangue);
+        }
+
+        .bloqueio-texto {
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            color: #888;
+            text-align: center;
+        }
+
+        .bloqueio-timer {
+            font-family: 'Cinzel', serif;
+            font-size: 1.4rem;
+            color: var(--ouro);
+            letter-spacing: 4px;
         }
 
         .rodape {
@@ -206,10 +254,22 @@
         <div class="subtitulo">VARSÓVIA · 2026</div>
         <hr class="divisor">
 
+        {% if bloqueado_segundos %}
+        <!-- Tela de bloqueio -->
+        <div class="instrucao">A corte fechou suas portas.</div>
+        <div class="bloqueio-box visivel" id="bloqueio-box">
+            <div class="bloqueio-icone">🩸</div>
+            <div class="bloqueio-texto">ACESSO SUSPENSO</div>
+            <div class="bloqueio-timer" id="bloqueio-timer">{{ bloqueado_segundos }}</div>
+            <div class="bloqueio-texto" style="color:#555;">Aguarde antes de tentar novamente.</div>
+        </div>
+        {% else %}
+
         <div class="instrucao">Quem é você esta noite?</div>
 
-        <form method="POST" action="/login" style="width:100%; display:flex; flex-direction:column; gap:20px;" id="form-login">
+        <form method="POST" action="/login" style="width:100%; display:flex; flex-direction:column; align-items:center; gap:20px;" id="form-login">
             <input type="hidden" name="personagem" id="input-personagem" value="{{ personagem_selecionado or '' }}">
+            <input type="hidden" name="senha" id="input-senha">
 
             <div class="personagens">
                 <div class="card-personagem {% if personagem_selecionado == 'Lior' %}selecionado{% endif %}"
@@ -226,34 +286,104 @@
                 </div>
             </div>
 
-            <div class="campo-senha {% if personagem_selecionado %}visivel{% endif %}" id="campo-senha">
-                <label id="label-senha">SENHA DE <span id="nome-label">{{ personagem_selecionado or '' }}</span></label>
-                <input type="password" name="senha" id="input-senha" autocomplete="current-password" autofocus>
+            <div class="campo-pin {% if personagem_selecionado %}visivel{% endif %}" id="campo-pin">
+                <div class="pin-label">CÓDIGO DE SANGUE — <span id="nome-label">{{ personagem_selecionado or '' }}</span></div>
+                <div class="pin-dots {% if erro %}erro{% endif %}" id="pin-dots">
+                    <div class="pin-dot" id="dot-0"></div>
+                    <div class="pin-dot" id="dot-1"></div>
+                    <div class="pin-dot" id="dot-2"></div>
+                    <div class="pin-dot" id="dot-3"></div>
+                </div>
                 {% if erro %}<div class="erro">{{ erro }}</div>{% endif %}
-                <button type="submit" class="btn-entrar">ENTRAR</button>
             </div>
+
+            <!-- Input real: invisível, focado por JS -->
+            <input type="tel" id="pin-real" class="pin-input"
+                   maxlength="4" inputmode="numeric" pattern="[0-9]*"
+                   autocomplete="one-time-code">
         </form>
+        {% endif %}
 
         <hr class="divisor">
         <div class="rodape">A corte não dorme. O Vístula corre escuro.</div>
     </div>
 
     <script>
+        let pinAtual = '';
+
         function selecionarPersonagem(nome) {
             document.getElementById('input-personagem').value = nome;
             document.getElementById('nome-label').textContent = nome.toUpperCase();
-
             document.getElementById('card-lior').classList.toggle('selecionado', nome === 'Lior');
             document.getElementById('card-fryderyk').classList.toggle('selecionado', nome === 'Fryderyk');
-
-            const campo = document.getElementById('campo-senha');
-            campo.classList.add('visivel');
-            document.getElementById('input-senha').focus();
+            document.getElementById('campo-pin').classList.add('visivel');
+            pinAtual = '';
+            atualizarDots();
+            // Foca o input invisível para capturar teclado
+            document.getElementById('pin-real').focus();
         }
 
-        // Se voltou com erro, mantém o card selecionado
-        const personagemAtual = document.getElementById('input-personagem').value;
-        if (personagemAtual) selecionarPersonagem(personagemAtual);
+        function atualizarDots() {
+            for (let i = 0; i < 4; i++) {
+                document.getElementById('dot-' + i).classList.toggle('preenchido', i < pinAtual.length);
+            }
+        }
+
+        const pinInput = document.getElementById('pin-real');
+        if (pinInput) {
+            pinInput.addEventListener('input', function() {
+                // Mantém só dígitos
+                const val = this.value.replace(/\D/g, '').slice(0, 4);
+                this.value = val;
+                pinAtual = val;
+                atualizarDots();
+
+                if (pinAtual.length === 4) {
+                    document.getElementById('input-senha').value = pinAtual;
+                    document.getElementById('form-login').submit();
+                }
+            });
+
+            // Clique nos dots foca o input
+            const dotsEl = document.getElementById('pin-dots');
+            if (dotsEl) dotsEl.addEventListener('click', () => pinInput.focus());
+        }
+
+        // Se voltou com erro: shake e limpa após animação
+        const dotsEl = document.getElementById('pin-dots');
+        if (dotsEl && dotsEl.classList.contains('erro')) {
+            dotsEl.classList.add('shake');
+            setTimeout(() => {
+                dotsEl.classList.remove('shake', 'erro');
+                // Limpa dots após feedback visual
+                for (let i = 0; i < 4; i++) {
+                    document.getElementById('dot-' + i).classList.remove('preenchido');
+                }
+            }, 600);
+        }
+
+        // Se voltou com personagem selecionado: foca PIN
+        const personagemAtual = document.getElementById('input-personagem');
+        if (personagemAtual && personagemAtual.value) {
+            selecionarPersonagem(personagemAtual.value);
+        }
+
+        // Countdown de bloqueio
+        const timerEl = document.getElementById('bloqueio-timer');
+        if (timerEl) {
+            let seg = parseInt(timerEl.textContent, 10);
+            const tick = setInterval(() => {
+                seg--;
+                if (seg <= 0) {
+                    clearInterval(tick);
+                    location.reload();
+                    return;
+                }
+                const m = Math.floor(seg / 60);
+                const s = String(seg % 60).padStart(2, '0');
+                timerEl.textContent = m > 0 ? m + ':' + s : s + 's';
+            }, 1000);
+        }
     </script>
 </body>
 </html>

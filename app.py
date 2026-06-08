@@ -1,6 +1,7 @@
 import os
 import io
 import json
+import hmac
 import queue as _queue
 import collections
 import random
@@ -10,7 +11,7 @@ import time as _time
 import threading
 import uuid
 import wave
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, Response, stream_with_context
 from openai import OpenAI
@@ -28,6 +29,47 @@ if not _secret:
     raise RuntimeError("SECRET_KEY não definida nas variáveis de ambiente.")
 app.secret_key = _secret
 
+# Segurança dos cookies de sessão
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+
+# Rate limiting de login: {ip: {'falhas': n, 'bloqueado_ate': float}}
+_rate_limit: dict = {}
+_rate_lock = threading.Lock()
+_MAX_FALHAS = 5
+_BLOQUEIO_SEGUNDOS = 300  # 5 minutos
+
+
+def _checar_rate_limit(ip: str) -> tuple[bool, int]:
+    """Retorna (bloqueado, segundos_restantes)."""
+    with _rate_lock:
+        entrada = _rate_limit.get(ip)
+        if not entrada:
+            return False, 0
+        bloqueado_ate = entrada.get('bloqueado_ate', 0)
+        restante = bloqueado_ate - _time.time()
+        if restante > 0:
+            return True, int(restante)
+        if restante <= 0 and bloqueado_ate:
+            # Desbloqueado: zera contador
+            del _rate_limit[ip]
+        return False, 0
+
+
+def _registrar_falha(ip: str):
+    with _rate_lock:
+        entrada = _rate_limit.setdefault(ip, {'falhas': 0, 'bloqueado_ate': 0})
+        entrada['falhas'] += 1
+        if entrada['falhas'] >= _MAX_FALHAS:
+            entrada['bloqueado_ate'] = _time.time() + _BLOQUEIO_SEGUNDOS
+            entrada['falhas'] = 0
+
+
+def _limpar_falhas(ip: str):
+    with _rate_lock:
+        _rate_limit.pop(ip, None)
+
 
 def login_required(f):
     @wraps(f)
@@ -41,20 +83,44 @@ def login_required(f):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     erro = None
+    bloqueado_segundos = 0
     personagem_selecionado = None
+
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+
     if request.method == 'POST':
+        bloqueado, restante = _checar_rate_limit(ip)
+        if bloqueado:
+            return render_template('login.html',
+                erro=None, personagem_selecionado=None,
+                bloqueado_segundos=restante), 429
+
         personagem = request.form.get('personagem', '').strip()
-        senha = request.form.get('senha', '').strip()
-        senhas_map = {
-            'Lior': os.environ.get('SENHA_LIOR', 'Lior'),
-            'Fryderyk': os.environ.get('SENHA_FRYDERYK', 'Fryderyk'),
+        pin = request.form.get('senha', '').strip()
+
+        pins_map = {
+            'Lior':     os.environ.get('PIN_LIOR', ''),
+            'Fryderyk': os.environ.get('PIN_FRYDERYK', ''),
         }
-        if personagem in senhas_map and senha == senhas_map[personagem]:
+
+        pin_correto = pins_map.get(personagem, '')
+        # Comparação em tempo constante para evitar timing attack
+        if personagem in pins_map and pin_correto and hmac.compare_digest(pin, pin_correto):
+            _limpar_falhas(ip)
+            session.permanent = True
             session['jogador'] = personagem
             return redirect(url_for('index'))
+
+        _registrar_falha(ip)
+        _, restante = _checar_rate_limit(ip)
         personagem_selecionado = personagem
-        erro = 'Senha incorreta.'
-    return render_template('login.html', erro=erro, personagem_selecionado=personagem_selecionado)
+        erro = 'PIN incorreto.'
+        bloqueado_segundos = restante
+
+    return render_template('login.html',
+        erro=erro,
+        personagem_selecionado=personagem_selecionado,
+        bloqueado_segundos=bloqueado_segundos)
 
 
 @app.route('/logout')
@@ -2196,10 +2262,13 @@ def xp_conceder():
     dados = request.get_json(silent=True) or {}
     senha = dados.get('senha', '')
     senha_mestre = os.environ.get('SENHA_MESTRE', '')
-    if not senha_mestre or senha != senha_mestre:
+    if not senha_mestre or not hmac.compare_digest(str(senha), str(senha_mestre)):
         return jsonify({'erro': 'Não autorizado'}), 403
     jogador = dados.get('jogador', '').strip()
-    quantidade = int(dados.get('quantidade', 0))
+    try:
+        quantidade = int(dados.get('quantidade', 0))
+    except (ValueError, TypeError):
+        return jsonify({'erro': 'Quantidade inválida'}), 400
     descricao = dados.get('descricao', '').strip()
     if jogador not in ('Lior', 'Fryderyk') or quantidade <= 0:
         return jsonify({'erro': 'Dados inválidos'}), 400
@@ -2412,34 +2481,6 @@ def tts_audio(token):
     )
 
 
-# ============================================================
-# ROTA TEMPORÁRIA — UPLOAD DO BANCO (remover após uso)
-# ============================================================
-@app.route('/admin/upload-banco', methods=['GET', 'POST'])
-def upload_banco():
-    TOKEN = 'vtm-upload-2026'
-    if request.method == 'GET':
-        return '''<!DOCTYPE html><html><body style="font-family:monospace;padding:40px;background:#111;color:#ccc;">
-        <h2 style="color:#8b0000;">Upload banco.db → /var/data/banco.db</h2>
-        <form method="POST" enctype="multipart/form-data">
-          <input type="password" name="token" placeholder="token" style="padding:8px;margin-bottom:10px;display:block;width:300px;"><br>
-          <input type="file" name="banco" accept=".db" style="margin-bottom:10px;display:block;"><br>
-          <button type="submit" style="background:#8b0000;color:white;padding:10px 20px;border:none;cursor:pointer;">Enviar</button>
-        </form></body></html>'''
-    token = request.form.get('token', '')
-    if token != TOKEN:
-        return 'Token inválido.', 403
-    arquivo = request.files.get('banco')
-    if not arquivo:
-        return 'Nenhum arquivo enviado.', 400
-    try:
-        destino = '/var/data/banco.db'
-        os.makedirs('/var/data', exist_ok=True)
-        arquivo.save(destino)
-        return f'<h2 style="color:green;font-family:monospace;padding:40px;">✓ banco.db salvo em {destino}<br><br>REMOVA ESTA ROTA DO CÓDIGO AGORA.</h2>'
-    except Exception as e:
-        return f'<h2 style="color:red;font-family:monospace;padding:40px;">ERRO: {str(e)}</h2>'
-# ============================================================
 
 
 if __name__ == '__main__':
