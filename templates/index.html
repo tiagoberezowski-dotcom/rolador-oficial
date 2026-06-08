@@ -45,37 +45,146 @@
 
         .subtitulo { text-align: center; color: #666; font-size: 0.85rem; margin-bottom: 24px; letter-spacing: 1px; }
 
-        /* ----- Avatar do Personagem ----- */
-        .avatar-container {
-            display: flex; justify-content: center; gap: 40px; margin-bottom: 30px;
+        /* ----- Banner do Personagem (capa + avatar + card unificados) ----- */
+        .character-banner {
+            border: 1px solid var(--borda-ouro);
+            border-radius: 10px;
+            overflow: visible;
+            margin-bottom: 26px;
+            background: var(--card);
+            box-shadow: 0 0 30px rgba(0,0,0,0.5), inset 0 0 30px rgba(201,169,110,0.02);
+        }
+        .capa-container {
+            width: 100%; height: 160px;
+            border-bottom: 1px solid var(--borda-ouro);
+            overflow: hidden; position: relative;
+            background: #0d0d0d;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+        }
+        .capa-container:hover .capa-bg.has-image {
+            filter: brightness(0.5);
+            transition: filter 0.3s;
+        }
+        .capa-bg {
+            width: 100%; height: 100%;
+            background: linear-gradient(160deg, #1a1408 0%, #0d0d0d 40%, #1a1208 70%, #0a0800 100%);
+            display: flex; align-items: center; justify-content: center;
+            transition: filter 0.3s;
+        }
+        .capa-bg.has-image {
+            background-size: cover; background-position: center;
+        }
+        .capa-reposition-hint {
+            position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+            font-family: 'Inter', sans-serif; font-size: 0.55rem; color: rgba(255,255,255,0.5);
+            letter-spacing: 1px; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+        }
+        .capa-container.repositioning .capa-reposition-hint,
+        .capa-container:hover .capa-reposition-hint { opacity: 1; }
+        .capa-container.repositioning { cursor: grabbing; }
+        .capa-container.repositioning .capa-bg { transition: none; }
+        .capa-upload-overlay {
+            position: absolute; inset: 0;
+            display: none; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s;
+            background: rgba(0,0,0,0.35);
+        }
+        .capa-container:hover .capa-upload-overlay {
+            opacity: 1;
+        }
+        .capa-upload-label {
+            cursor: pointer; pointer-events: auto;
+            font-family: 'Cinzel', serif; font-size: 0.7rem;
+            color: #888; letter-spacing: 2px;
+            padding: 7px 18px; border: 1px solid var(--ouro);
+            border-radius: 4px;
+            transition: 0.2s; background: rgba(0,0,0,0.6);
+        }
+        .capa-upload-label:hover { color: var(--ouro); background: rgba(0,0,0,0.8); }
+        .capa-hint {
+            position: absolute; bottom: 8px; right: 12px;
+            font-family: 'Inter', sans-serif; font-size: 0.55rem;
+            color: #333; letter-spacing: 1px;
+        }
+        .avatar-section {
+            display: flex; justify-content: center;
+            margin-top: -50px; z-index: 2; position: relative;
         }
         .avatar-circle {
-            width: 140px; height: 140px; border-radius: 50%;
+            width: 130px; height: 130px; border-radius: 50%;
             border: 3px solid var(--ouro);
             background: #000;
             display: flex; align-items: center; justify-content: center;
             overflow: hidden;
-            box-shadow: 0 0 20px rgba(201, 169, 110, 0.4);
-            position: relative;
+            box-shadow: 0 0 20px rgba(201, 169, 110, 0.35), 0 0 0 8px var(--bg);
+            position: relative; cursor: pointer;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+        .avatar-circle:hover {
+            border-color: var(--ouro-claro);
+            box-shadow: 0 0 28px rgba(201, 169, 110, 0.5), 0 0 0 8px var(--bg);
         }
         .avatar-circle img {
             width: 100%; height: 100%; object-fit: cover;
         }
         .avatar-placeholder {
             width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-            color: #666; font-family: 'Cinzel', serif; font-size: 0.8rem; text-align: center; padding: 10px;
+            color: #555; font-family: 'Cinzel', serif; font-size: 0.7rem; text-align: center; padding: 10px;
+        }
+        .avatar-upload-label {
+            cursor: pointer; display: block;
+        }
+        .avatar-upload-label:hover .avatar-placeholder { color: var(--ouro); }
+        /* ----- Header do Personagem ----- */
+        .personagem-card {
+            padding: 60px 24px 20px 24px;
+            display: flex; flex-direction: column; align-items: center; gap: 20px;
+            margin-top: -50px; z-index: 1; position: relative;
+        }
+        .personagem-nomes {
+            display: flex; flex-direction: column; gap: 4px; text-align: center;
+        }
+        .personagem-nome {
+            font-family: 'Cinzel', serif;
+            font-size: 1.35rem; color: var(--ouro);
+            letter-spacing: 3px;
+            text-shadow: 0 0 8px rgba(201,169,110,0.25);
+        }
+        .personagem-info {
+            font-family: 'Crimson Text', serif;
+            font-size: 0.92rem; color: var(--ouro-claro);
+            letter-spacing: 0.5px; opacity: 0.7; font-style: italic;
+        }
+        .personagem-divisor {
+            width: 100%; border: none;
+            border-top: 1px solid var(--borda-ouro); opacity: 0.25;
+        }
+        .personagem-trackers {
+            display: flex; align-items: center; justify-content: center;
+            gap: 14px; flex-wrap: nowrap;
+        }
+        .personagem-badge {
+            display: flex; flex-direction: column; align-items: center; gap: 3px;
+            font-family: 'Cinzel', serif; flex-shrink: 0;
+        }
+        .personagem-badge-label {
+            font-size: 0.55rem; color: #777; letter-spacing: 1.5px;
+        }
+        .personagem-badge-valor {
+            font-size: 0.95rem; color: var(--ouro-claro); font-weight: 600;
+        }
+        .personagem-badge-sub {
+            font-size: 0.55rem; color: #555; letter-spacing: 1px;
+        }
+        .personagem-badge-sep {
+            width: 1px; height: 28px; background: var(--borda-ouro); opacity: 0.25; flex-shrink: 0;
         }
 
         .container { max-width: 900px; margin: 0 auto; }
 
-        /* ----- Medidor de Fome do Topo ----- */
-        .fome-tracker {
-            display: flex; align-items: center; justify-content: center; gap: 20px;
-            background: #160507; border: 1px solid var(--borda-ouro);
-            border-radius: 8px; padding: 16px; margin-bottom: 30px;
-        }
-        .fome-label { font-family: 'Cinzel', serif; font-size: 1.2rem; letter-spacing: 2px; color: var(--fome); font-weight: bold;}
-        .gotas { display: flex; gap: 12px; align-items: center; }
+        /* ----- Medidor de Fome (nas gotas do header) ----- */
+        .gotas { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 2px; }
         .gota-fome { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
         .gota-fome i {
             width: 18px; height: 18px; display: block; border-radius: 50% 50% 50% 0; transform: rotate(45deg);
@@ -273,31 +382,33 @@
         .btn-cancelar-acao:hover { background: #1a1a1a; color: #aaa; border-color: #666; }
 
         /* ----- Disciplines Expandíveis ----- */
-        .disc-wrap { margin-bottom: 5px; }
+        .disc-wrap { margin-bottom: 2px; }
 
         .disc-header {
-            display: flex; align-items: center; gap: 8px;
-            padding: 7px 10px; border-radius: 4px; border: 1px solid var(--borda-ouro);
-            cursor: pointer; transition: 0.25s; background: #0d0d0d; user-select: none;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 8px; border-radius: 4px; border: 1px solid transparent;
+            cursor: pointer; transition: 0.3s; background: transparent; user-select: none;
         }
-        .disc-header:hover { background: #1a1a15; border-color: var(--ouro); }
+        .disc-header:hover { border-color: var(--borda-ouro); background: #1a1a15; }
         .disc-header.expandido {
-            background: #161208; border-color: var(--ouro);
+            border-color: var(--ouro); background: #161208;
             border-bottom-left-radius: 0; border-bottom-right-radius: 0;
         }
         .disc-nome {
-            font-family: 'Cinzel', serif; font-size: 0.85rem; color: #aaa; flex: 1; transition: 0.2s;
+            font-family: 'Cinzel', serif; font-size: 0.85rem; color: #aaa; flex: 1; user-select: none; transition: 0.2s;
         }
         .disc-header:hover .disc-nome, .disc-header.expandido .disc-nome { color: var(--ouro-claro); }
         .disc-toggle {
-            font-size: 0.6rem; color: #555; transition: transform 0.25s, color 0.25s;
+            font-size: 7px; color: #444; margin-left: 4px; transition: transform 0.25s, color 0.25s, opacity 0.2s;
+            flex-shrink: 0; line-height: 0; opacity: 0;
         }
+        .disc-header:hover .disc-toggle, .disc-header.expandido .disc-toggle { opacity: 1; }
         .disc-header.expandido .disc-toggle { transform: rotate(90deg); color: var(--ouro); }
 
         .disc-poderes {
             display: none; background: #06060a;
             border: 1px solid var(--ouro); border-top: none;
-            border-radius: 0 0 4px 4px; padding: 2px 0;
+            border-radius: 0 0 4px 4px; padding: 2px 0; margin-top: -2px; margin-bottom: 2px;
         }
         .disc-poderes.aberto { display: block; }
 
@@ -309,9 +420,10 @@
         .poder-row.tem-formula:not(.bloqueado) { cursor: pointer; }
         .poder-row.tem-formula:not(.bloqueado):hover { background: #130f06; }
         .poder-row.bloqueado { opacity: 0.25; pointer-events: none; }
-        .disc-header.sem-disc { opacity: 0.45; }
+        .disc-header.sem-disc { }
         .disc-header.sem-disc .disc-nome { color: #555; }
-        .disc-adquirir { font-size: 0.7rem; color: #666; border: 1px solid #333; border-radius: 3px; padding: 2px 6px; cursor: pointer; background: transparent; margin-left: auto; white-space: nowrap; }
+        .disc-adquirir { font-size: 7px; color: #444; border: 1px solid #2a2a2a; border-radius: 3px; padding: 1px 4px; cursor: pointer; background: transparent; white-space: nowrap; flex-shrink: 0; line-height: 1; opacity: 0; transition: opacity 0.2s; }
+        .disc-header:hover .disc-adquirir { opacity: 1; }
         .disc-adquirir:hover { border-color: var(--ouro); color: var(--ouro); }
         .xp-counter { display: flex; gap: 16px; align-items: center; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 2px; color: #888; padding: 6px 0; }
         .xp-disponivel { color: var(--ouro); font-size: 0.9rem; }
@@ -640,24 +752,79 @@
         <h1>VTM 5</h1>
         <p class="subtitulo">Vampire: The Masquerade 5ª Edição</p>
 
-        <!-- Avatares dos Personagens -->
-        <div class="avatar-container">
-            <div style="text-align: center;">
-                <label for="avatar-file-input" style="cursor: pointer; display: block;">
-                    <div class="avatar-circle" id="avatar-visual" title="Clique para enviar uma imagem">
-                        <div class="avatar-placeholder">Clique para enviar</div>
+        <!-- Banner do Personagem (capa + avatar + card unificados) -->
+        <div class="character-banner">
+            <div class="capa-container" id="capa-container" title="Clique para alterar a capa | Arraste para reposicionar">
+                <div class="capa-bg" id="capa-bg" style="background-position: center;">
+                    <label for="capa-file-input" class="capa-upload-label" onclick="event.stopPropagation();">✧ CAPA</label>
+                </div>
+                <div class="capa-upload-overlay" id="capa-overlay">
+                    <span class="capa-upload-label" id="capa-overlay-btn">✧ ALTERAR CAPA</span>
+                </div>
+                <span class="capa-reposition-hint" id="capa-reposition-hint">ARRASTE PARA AJUSTAR</span>
+                <span class="capa-hint">1600 × 400</span>
+            </div>
+            <input type="file" id="capa-file-input" style="display: none;" accept="image/*" onchange="processarUploadCapa(event)">
+            <div class="avatar-section">
+                <label for="avatar-file-input" class="avatar-upload-label">
+                    <div class="avatar-circle" id="avatar-visual" title="Clique para enviar avatar">
+                        <div class="avatar-placeholder">Foto</div>
                     </div>
                 </label>
-                <input type="file" id="avatar-file-input" style="display: none;" accept="image/*" onchange="processarUploadAvatar(event)">
-                <div style="margin-top: 8px; font-family: 'Cinzel', serif; color: #999; font-size: 0.75rem; letter-spacing: 1px;">{{ jogador | upper }}</div>
+            </div>
+            <input type="file" id="avatar-file-input" style="display: none;" accept="image/*" onchange="processarUploadAvatar(event)">
+            <div class="personagem-card">
+            <div class="personagem-nomes">
+                <div class="personagem-nome">{{ nome }}</div>
+                <div class="personagem-info">{{ info }}</div>
+            </div>
+            <hr class="personagem-divisor">
+            <div class="personagem-trackers">
+                <div class="personagem-badge">
+                    <span class="personagem-badge-label">HUNGER</span>
+                    <span class="personagem-badge-valor" id="fome-valor-txt">0 / 5</span>
+                    <div class="gotas" id="gotas"></div>
+                </div>
+                <span class="personagem-badge-sep"></span>
+                <div class="personagem-badge" onclick="abrirEditarRecurso('willpower')" style="cursor:pointer;">
+                    <span class="personagem-badge-label">WILLPOWER</span>
+                    <span class="personagem-badge-valor" id="wp-valor">5</span>
+                    <div class="recurso-buttons" style="margin-top:2px;">
+                        <button class="btn-recurso" onclick="event.stopPropagation(); alterarRecurso('willpower', -1)">−</button>
+                        <button class="btn-recurso" onclick="event.stopPropagation(); alterarRecurso('willpower', 1)">+</button>
+                    </div>
+                </div>
+                <span class="personagem-badge-sep"></span>
+                <div class="personagem-badge" onclick="abrirEditarRecurso('health')" style="cursor:pointer;">
+                    <span class="personagem-badge-label">HEALTH</span>
+                    <span class="personagem-badge-valor" id="health-valor">3</span>
+                    <div class="recurso-buttons" style="margin-top:2px;">
+                        <button class="btn-recurso" onclick="event.stopPropagation(); alterarRecurso('health', -1)">−</button>
+                        <button class="btn-recurso" onclick="event.stopPropagation(); alterarRecurso('health', 1)">+</button>
+                    </div>
+                </div>
+                <span class="personagem-badge-sep"></span>
+                <div class="personagem-badge" onclick="abrirEditarRecurso('humanity')" style="cursor:pointer;">
+                    <span class="personagem-badge-label">HUMANITY</span>
+                    <span class="personagem-badge-valor" id="humanity-valor">7</span>
+                    <div class="recurso-buttons" style="margin-top:2px;">
+                        <button class="btn-recurso" onclick="event.stopPropagation(); alterarRecurso('humanity', -1)">−</button>
+                        <button class="btn-recurso" onclick="event.stopPropagation(); alterarRecurso('humanity', 1)">+</button>
+                    </div>
+                </div>
+                <span class="personagem-badge-sep"></span>
+                <div class="personagem-badge">
+                    <span class="personagem-badge-label">BANE</span>
+                    <span class="personagem-badge-sub" style="font-size:0.62rem; color:var(--ouro-claro); opacity:0.8; max-width:140px; text-align:center; line-height:1.2;">{{ bane }}</span>
+                </div>
+                <span class="personagem-badge-sep"></span>
+                <div class="personagem-badge">
+                    <span class="personagem-badge-label">RESONANCE</span>
+                    <span class="personagem-badge-sub" style="font-size:0.62rem; color:var(--ouro-claro); opacity:0.8;">{{ resonance }}</span>
+                </div>
             </div>
         </div>
-
-        <div class="fome-tracker">
-            <span class="fome-label">HUNGER</span>
-            <div class="gotas" id="gotas"></div>
-            <span class="fome-valor" id="fome-valor-txt">0 / 5</span>
-        </div>
+        </div><!-- fecha character-banner -->
 
         <div id="ficha-container"></div>
 
@@ -786,35 +953,6 @@
             </div>
         </div>
 
-        <!-- Painel de Recursos -->
-        <div class="recursos-panel">
-            <div class="recurso-item">
-                <span class="recurso-label">WILLPOWER</span>
-                <span class="recurso-valor" id="wp-valor" onclick="abrirEditarRecurso('willpower')">5</span>
-                <div class="recurso-buttons">
-                    <button class="btn-recurso" onclick="alterarRecurso('willpower', -1)">−</button>
-                    <button class="btn-recurso" onclick="alterarRecurso('willpower', 1)">+</button>
-                </div>
-            </div>
-            <div class="recurso-item">
-                <span class="recurso-label">HEALTH</span>
-                <span class="recurso-valor" id="health-valor" onclick="abrirEditarRecurso('health')">3</span>
-                <div class="recurso-buttons">
-                    <button class="btn-recurso" onclick="alterarRecurso('health', -1)">−</button>
-                    <button class="btn-recurso" onclick="alterarRecurso('health', 1)">+</button>
-                </div>
-            </div>
-            <div class="recurso-item">
-                <span class="recurso-label">HUMANITY</span>
-                <span class="recurso-valor" id="humanity-valor" onclick="abrirEditarRecurso('humanity')">7</span>
-                <div class="recurso-buttons">
-                    <button class="btn-recurso" onclick="alterarRecurso('humanity', -1)">−</button>
-                    <button class="btn-recurso" onclick="alterarRecurso('humanity', 1)">+</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Painel de Notas -->
         <div class="notas-panel">
             <div class="notas-header">NOTAS PRIVADAS</div>
             <input type="text" class="nota-input" id="nota-input" placeholder="Digite uma nota e pressione Enter ou clique +">
@@ -894,8 +1032,13 @@
     <audio id="som-dados" src="https://actions.google.com/sounds/v1/foley/rolling_dice.ogg" preload="auto"></audio>
 
     <script>
-        let fichaViva = JSON.parse(localStorage.getItem('vtm_ficha_viva')) || {};
-        let especialidades = JSON.parse(localStorage.getItem('vtm_especialidades')) || {};
+        // Chaves por jogador (evita vazamento entre personagens)
+        function _lsKey(base) {
+            const j = document.getElementById('jogador').value.trim();
+            return 'vtm_' + base + (j ? '_' + j : '');
+        }
+        let fichaViva = JSON.parse(localStorage.getItem(_lsKey('ficha_viva'))) || {};
+        let especialidades = JSON.parse(localStorage.getItem(_lsKey('especialidades'))) || {};
         let acaoAtual = [];
         let fomeAtual = parseInt(localStorage.getItem('fome') || '0', 10);
         let selecionadosReroll = [];
@@ -910,7 +1053,41 @@
 
         let acaoPendente = null; // Ação aguardando confirmação para ir ao Mestre
 
-        let currentAvatarUrl = localStorage.getItem('vtm_avatar_url') || '';
+        let currentAvatarUrl = localStorage.getItem(_lsKey('avatar_url')) || '';
+        let currentCapaUrl = localStorage.getItem(_lsKey('capa_url')) || '';
+
+        function atualizarCapaVisual(url) {
+            const capaEl = document.getElementById('capa-bg');
+            const overlay = document.getElementById('capa-overlay');
+            if (!capaEl) return;
+            if (url && (url.startsWith('http') || url.startsWith('data:'))) {
+                capaEl.style.backgroundImage = 'url(' + url + ')';
+                capaEl.classList.add('has-image');
+                capaEl.querySelector('.capa-upload-label').style.display = 'none';
+                if (overlay) overlay.style.display = 'flex';
+            } else {
+                capaEl.style.backgroundImage = '';
+                capaEl.classList.remove('has-image');
+                var lbl = capaEl.querySelector('.capa-upload-label');
+                if (lbl) lbl.style.display = '';
+                if (overlay) overlay.style.display = 'none';
+            }
+        }
+
+        async function salvarCapa(url) {
+            currentCapaUrl = url || '';
+            localStorage.setItem(_lsKey('capa_url'), currentCapaUrl);
+            atualizarCapaVisual(currentCapaUrl);
+            if (currentCapaUrl) {
+                try {
+                    await fetch('/avatar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ capa: currentCapaUrl })
+                    });
+                } catch(e) {}
+            }
+        }
 
         let ultimoHashHistorico = "";
 
@@ -1304,7 +1481,7 @@
 
         function toggleEspecialidade(statName, btn) {
             especialidades[statName] = !especialidades[statName];
-            localStorage.setItem('vtm_especialidades', JSON.stringify(especialidades));
+            localStorage.setItem(_lsKey('especialidades'), JSON.stringify(especialidades));
             btn.className = 'spec-btn' + (especialidades[statName] ? ' ativa' : '');
             if (acaoAtual.includes(statName)) atualizarCaixaSoma();
             salvarFichaDebounced();
@@ -1315,7 +1492,7 @@
             let novoValor = (valorAtual === dotIndex + 1) ? dotIndex : dotIndex + 1;
 
             fichaViva[statName] = novoValor;
-            localStorage.setItem('vtm_ficha_viva', JSON.stringify(fichaViva));
+            localStorage.setItem(_lsKey('ficha_viva'), JSON.stringify(fichaViva));
             salvarFichaDebounced();
 
             Array.from(dotsContainer.children).forEach((dot, i) => {
@@ -2007,7 +2184,7 @@
 
         async function salvarAvatar(url) {
             currentAvatarUrl = url || '';
-            localStorage.setItem('vtm_avatar_url', currentAvatarUrl);
+            localStorage.setItem(_lsKey('avatar_url'), currentAvatarUrl);
             atualizarAvatarVisual(currentAvatarUrl);
             // Salva avatar separado (via POST /avatar) — aguarda antes de salvar ficha
             if (currentAvatarUrl) {
@@ -2025,11 +2202,153 @@
         function atualizarAvatarVisual(url) {
             const avatarEl = document.getElementById('avatar-visual');
             if (url && (url.startsWith('http') || url.startsWith('data:'))) {
-                avatarEl.innerHTML = `<img src="${url}" alt="Avatar" onerror="this.parentElement.innerHTML='<div class=avatar-placeholder>Imagem não carregou</div>'">`;
+                avatarEl.innerHTML = `<img src="${url}" alt="Avatar" onerror="this.parentElement.innerHTML='<div class=avatar-placeholder>Foto</div>'">`;
             } else {
-                avatarEl.innerHTML = '<div class="avatar-placeholder">Clique para enviar</div>';
+                avatarEl.innerHTML = '<div class="avatar-placeholder">Foto</div>';
             }
         }
+
+        let capaOffsetY = parseInt(localStorage.getItem(_lsKey('capa_offset')) || '50', 10);
+
+        function _salvarCapaOffset() {
+            localStorage.setItem(_lsKey('capa_offset'), Math.round(capaOffsetY));
+        }
+
+        function atualizarCapaVisual(url) {
+            const capaEl = document.getElementById('capa-bg');
+            const overlay = document.getElementById('capa-overlay');
+            const hint = document.getElementById('capa-reposition-hint');
+            if (!capaEl) return;
+            if (url && (url.startsWith('http') || url.startsWith('data:'))) {
+                capaEl.style.backgroundImage = 'url(' + url + ')';
+                capaEl.style.backgroundPosition = 'center ' + capaOffsetY + '%';
+                capaEl.classList.add('has-image');
+                capaEl.querySelector('.capa-upload-label').style.display = 'none';
+                if (overlay) overlay.style.display = 'flex';
+                if (hint) hint.style.display = '';
+            } else {
+                capaEl.style.backgroundImage = '';
+                capaEl.style.backgroundPosition = 'center';
+                capaEl.classList.remove('has-image');
+                capaOffsetY = 50;
+                var lbl = capaEl.querySelector('.capa-upload-label');
+                if (lbl) lbl.style.display = '';
+                if (overlay) overlay.style.display = 'none';
+                if (hint) hint.style.display = 'none';
+            }
+        }
+
+        function processarUploadCapa(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const TARGET_W = 1800, TARGET_H = 320;
+                    const TARGET_RATIO = TARGET_W / TARGET_H;
+                    const srcW = img.width, srcH = img.height;
+                    const srcRatio = srcW / srcH;
+
+                    let sx, sy, sw, sh;
+                    if (srcRatio > TARGET_RATIO) {
+                        // Original mais larga → corta as laterais
+                        sw = Math.round(srcH * TARGET_RATIO);
+                        sh = srcH;
+                        sx = Math.round((srcW - sw) / 2);
+                        sy = 0;
+                    } else {
+                        // Original mais alta → corta topo/base
+                        sw = srcW;
+                        sh = Math.round(srcW / TARGET_RATIO);
+                        sx = 0;
+                        sy = Math.round((srcH - sh) / 2);
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = TARGET_W; canvas.height = TARGET_H;
+                    const ctx = canvas.getContext('2d');
+                    // Suaviza o resize
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
+
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    capaOffsetY = 50;
+                    atualizarCapaVisual(dataUrl);
+                    salvarCapa(dataUrl);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Arraste para reposicionar a capa (clique abre upload, arraste reposiciona)
+        (function initCapaDrag() {
+            let dragging = false, dragged = false, startY = 0, startOffset = 50;
+            const container = document.getElementById('capa-container');
+            const capaEl = document.getElementById('capa-bg');
+            const fileInput = document.getElementById('capa-file-input');
+            if (!container || !capaEl) return;
+
+            function applyOffset(pct) {
+                capaOffsetY = Math.max(0, Math.min(100, pct));
+                capaEl.style.backgroundPosition = 'center ' + capaOffsetY + '%';
+                _salvarCapaOffset();
+            }
+
+            container.addEventListener('mousedown', function(e) {
+                if (e.target.closest('.capa-upload-label')) return; // deixa o botão agir
+                if (!capaEl.classList.contains('has-image')) {
+                    fileInput.click();
+                    return;
+                }
+                dragging = true; dragged = false;
+                startY = e.clientY; startOffset = capaOffsetY;
+                container.classList.add('repositioning');
+                e.preventDefault();
+            });
+            window.addEventListener('mousemove', function(e) {
+                if (!dragging) return;
+                const dy = e.clientY - startY;
+                if (Math.abs(dy) > 3) dragged = true;
+                const pctChange = (dy / container.offsetHeight) * 100;
+                applyOffset(startOffset + pctChange);
+            });
+            window.addEventListener('mouseup', function(e) {
+                if (!dragging) return;
+                dragging = false;
+                container.classList.remove('repositioning');
+                if (!dragged) fileInput.click();
+            });
+
+            // Touch
+            container.addEventListener('touchstart', function(e) {
+                if (e.target.closest('.capa-upload-label')) return;
+                if (!capaEl.classList.contains('has-image')) {
+                    fileInput.click();
+                    return;
+                }
+                if (e.touches.length === 1) {
+                    dragging = true; dragged = false;
+                    startY = e.touches[0].clientY; startOffset = capaOffsetY;
+                    container.classList.add('repositioning');
+                }
+            }, {passive: false});
+            window.addEventListener('touchmove', function(e) {
+                if (!dragging) return;
+                const dy = e.touches[0].clientY - startY;
+                if (Math.abs(dy) > 5) dragged = true;
+                const pctChange = (dy / container.offsetHeight) * 100;
+                applyOffset(startOffset + pctChange);
+            }, {passive: false});
+            window.addEventListener('touchend', function(e) {
+                if (!dragging) return;
+                dragging = false;
+                container.classList.remove('repositioning');
+                if (!dragged) fileInput.click();
+            });
+        })();
 
         function processarUploadAvatar(event) {
             const file = event.target.files[0];
@@ -2071,13 +2390,18 @@
                     if (d.fome !== undefined) { fomeAtual = d.fome; renderGotasFome(); }
                     if (d.avatar) {
                         currentAvatarUrl = d.avatar;
-                        localStorage.setItem('vtm_avatar_url', currentAvatarUrl);
+                        localStorage.setItem(_lsKey('avatar_url'), currentAvatarUrl);
                         atualizarAvatarVisual(d.avatar);
                         const nomeJogador = document.getElementById('jogador').value.trim();
                         avataresPorJogador[nomeJogador] = d.avatar;
                     }
-                    localStorage.setItem('vtm_ficha_viva', JSON.stringify(fichaViva));
-                    localStorage.setItem('vtm_especialidades', JSON.stringify(especialidades));
+                    if (d.capa) {
+                        currentCapaUrl = d.capa;
+                        localStorage.setItem(_lsKey('capa_url'), currentCapaUrl);
+                        atualizarCapaVisual(d.capa);
+                    }
+                    localStorage.setItem(_lsKey('ficha_viva'), JSON.stringify(fichaViva));
+                    localStorage.setItem(_lsKey('especialidades'), JSON.stringify(especialidades));
                     inicializarFicha();
                 }
             } catch(e) {}
@@ -2218,32 +2542,38 @@
             // Botão OUVIR + botão PAUSA (apenas para o Mestre)
             if (isMestre) {
                 const corpoDiv = div.querySelector('div');
-                const btnStyle = "margin-top:8px;background:none;border:1px solid #444;color:#888;border-radius:4px;padding:3px 10px;font-size:0.75rem;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px;opacity:0.8;";
-
-                const btnPlay = document.createElement('button');
-                btnPlay.textContent = '▶ OUVIR';
-                btnPlay.title = 'Ouvir narração';
-                btnPlay.style.cssText = btnStyle;
-
-                const btnPause = document.createElement('button');
-                btnPause.textContent = '⏸';
-                btnPause.title = 'Pausar / Continuar';
-                btnPause.style.cssText = btnStyle + "margin-left:4px;display:none;";
-
-                btnPlay.onclick = () => reproduzirTTS(btnPlay, btnPause, textoTTS);
-                if (corpoDiv) {
-                    corpoDiv.appendChild(btnPlay);
-                    corpoDiv.appendChild(btnPause);
-                }
+                if (corpoDiv) _adicionarBotaoTTS(corpoDiv, textoTTS);
             }
             return div;
         }
 
         let _audioAtual = null;
 
+        /** Adiciona botões ▶ OUVIR / ⏸ a qualquer elemento container */
+        function _adicionarBotaoTTS(container, textoHTML) {
+            const btnStyle = "margin-top:8px;background:none;border:1px solid #444;color:#888;border-radius:4px;padding:3px 10px;font-size:0.75rem;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px;opacity:0.8;";
+            const btnPlay = document.createElement('button');
+            btnPlay.textContent = '▶ OUVIR';
+            btnPlay.title = 'Ouvir narração';
+            btnPlay.style.cssText = btnStyle;
+            const btnPause = document.createElement('button');
+            btnPause.textContent = '⏸';
+            btnPause.title = 'Pausar / Continuar';
+            btnPause.style.cssText = btnStyle + "margin-left:4px;display:none;";
+            btnPlay.onclick = () => reproduzirTTS(btnPlay, btnPause, textoHTML);
+            container.appendChild(btnPlay);
+            container.appendChild(btnPause);
+        }
+
         async function reproduzirTTS(botao, btnPause, textoComTags) {
             if (_audioAtual) { _audioAtual.pause(); _audioAtual = null; }
-            const textoPlano = textoComTags.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            const textoPlano = textoComTags
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<hr[^>]*>/gi, '\n\n')
+                .replace(/<[^>]+>/g, '')
+                .replace(/ {2,}/g, ' ')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
             const labelOrig = botao.textContent;
             botao.textContent = '⏳ CARREGANDO...';
             botao.disabled = true;
@@ -2586,6 +2916,11 @@
             if (sseNpcDiv) {
                 const cur = sseNpcDiv.querySelector('.cursor-streaming');
                 if (cur) cur.remove();
+                // Adiciona botão TTS ao bloco do NPC (mesma voz do Mestre)
+                if (sseNpcTexto.trim()) {
+                    const corpo = sseNpcDiv.querySelector('div');
+                    if (corpo) _adicionarBotaoTTS(corpo, sseNpcTexto);
+                }
             }
             sseNpcDiv = null; sseNpcTextSpan = null; sseNpcTexto = '';
         }
@@ -2761,11 +3096,15 @@
         const _ATRIBUTOS = new Set(['Strength','Dexterity','Stamina','Charisma','Manipulation','Composure','Intelligence','Wits','Resolve']);
         const _DISCIPLINAS = new Set(['Celerity','Fortitude','Potence','Blood Sorcery','Auspex','Dominate','Obfuscate','Oblivion','Animalism','Presence','Protean','Thin-Blood Alchemy']);
 
-        function custoXP(stat) {
+        function custoXP(stat, nivelAtual = 0) {
+            const nivelNovo = nivelAtual + 1;
             const jogador = document.getElementById('jogador').value.trim();
-            if (_ATRIBUTOS.has(stat)) return 5;
-            if (_DISCIPLINAS.has(stat)) return (_INCLAN[jogador] && _INCLAN[jogador].has(stat)) ? 3 : 5;
-            return 3;
+            if (_ATRIBUTOS.has(stat)) return nivelNovo * 5;
+            if (_DISCIPLINAS.has(stat)) {
+                const inClan = _INCLAN[jogador] && _INCLAN[jogador].has(stat);
+                return nivelNovo * (inClan ? 5 : 7);
+            }
+            return nivelNovo * 3;  // Skills
         }
 
         async function carregarXP() {
@@ -2778,7 +3117,7 @@
         }
 
         function abrirModalCompraXP(stat, nivelAtual) {
-            const custo = custoXP(stat);
+            const custo = custoXP(stat, nivelAtual);
             _xpCompra = { stat, nivelAtual, custo };
             const info = document.getElementById('xp-compra-info');
             info.innerHTML = `<b style="color:var(--ouro-claro); font-family:'Cinzel',serif;">${stat.toUpperCase()}</b><br>
@@ -2808,7 +3147,7 @@
                 const d = await r.json();
                 if (d.status === 'ok') {
                     fichaViva[_xpCompra.stat] = d.novo_nivel;
-                    localStorage.setItem('vtm_ficha_viva', JSON.stringify(fichaViva));
+                    localStorage.setItem(_lsKey('ficha_viva'), JSON.stringify(fichaViva));
                     fecharModalXP();
                     await carregarXP();
                     inicializarFicha();
@@ -2853,14 +3192,17 @@
 
         /* ---------- INICIALIZAÇÃO ---------- */
         renderGotasFome();
-        carregarFichaServidor();
+        atualizarAvatarVisual(currentAvatarUrl);
+        atualizarCapaVisual(currentCapaUrl);
         carregarRecursos();
         carregarNotas();
         carregarAvatarNPCs();
         carregarXP();
-
-        inicializarFicha();
         carregarHistorico();
+
+        // Renderiza do cache primeiro (rápido), servidor sobrescreve depois
+        inicializarFicha();
+        carregarFichaServidor();
 
         /* ---------- LÓGICA DO CHAT ---------- */
         let chatMsgCount = 0;
@@ -2995,6 +3337,7 @@
                                     const corpo = document.createElement('div');
                                     corpo.style.cssText = 'flex:1;min-width:0;';
                                     corpo.innerHTML = `<strong style="display:block;color:#aaa;font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:2px;margin-bottom:5px;">${npcCorrente.toUpperCase()}</strong><span style="color:#d8d8d8;font-family:Inter,sans-serif;font-size:15px;line-height:1.6;display:block;font-style:italic;">${formatarTextoChat(textoNPC)}</span>`;
+                                    _adicionarBotaoTTS(corpo, textoNPC);
                                     npcEl.appendChild(avatarEl);
                                     npcEl.appendChild(corpo);
                                     chatBox.appendChild(npcEl);
