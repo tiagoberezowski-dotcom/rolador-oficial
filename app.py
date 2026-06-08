@@ -2306,6 +2306,20 @@ _restaurar_historico()
 
 EDGE_TTS_VOICE = "pt-BR-ThalitaNeural"
 
+# Cache de tokens TTS: {token: (texto, timestamp)}
+# Tokens expiram após 120 segundos.
+_tts_cache: dict = {}
+_tts_cache_lock = threading.Lock()
+_TTS_TOKEN_TTL = 120
+
+
+def _tts_limpar_expirados():
+    agora = _time.time()
+    with _tts_cache_lock:
+        expirados = [k for k, (_, ts) in _tts_cache.items() if agora - ts > _TTS_TOKEN_TTL]
+        for k in expirados:
+            del _tts_cache[k]
+
 
 def _strip_audio_tags(texto: str) -> str:
     """Remove tags de expressão vocal como [whispers], [serious] etc."""
@@ -2313,17 +2327,8 @@ def _strip_audio_tags(texto: str) -> str:
     return _re.sub(r'\[[^\]]{1,60}\]', ' ', texto).strip()
 
 
-@app.route('/tts', methods=['POST'])
-@login_required
-def tts():
-    import asyncio
-    import edge_tts
-
-    data = request.get_json(silent=True) or {}
-    texto = data.get('texto', '').strip()
-    if not texto:
-        return jsonify({'erro': 'texto vazio'}), 400
-
+def _preparar_texto_tts(texto: str) -> str:
+    """Trunca em 5000 chars respeitando fim de parágrafo/frase e remove tags."""
     LIMITE_CHARS = 5000
     paragrafos = texto.split('\n\n')
     acumulado = ''
@@ -2332,16 +2337,52 @@ def tts():
             acumulado += ('\n\n' if acumulado else '') + p
         else:
             break
-
     if not acumulado:
         corte = texto[:LIMITE_CHARS]
         fim_frase = max(corte.rfind('. '), corte.rfind('! '), corte.rfind('? '), corte.rfind('.\n'))
-        if fim_frase > 100:
-            acumulado = corte[:fim_frase + 1]
-        else:
-            acumulado = corte
+        acumulado = corte[:fim_frase + 1] if fim_frase > 100 else corte
+    return _strip_audio_tags(acumulado)
 
-    texto = _strip_audio_tags(acumulado)
+
+@app.route('/tts', methods=['POST'])
+@login_required
+def tts():
+    """Recebe texto, gera token e retorna URL de streaming."""
+    data = request.get_json(silent=True) or {}
+    texto = data.get('texto', '').strip()
+    if not texto:
+        return jsonify({'erro': 'texto vazio'}), 400
+
+    texto_preparado = _preparar_texto_tts(texto)
+    token = uuid.uuid4().hex
+    _tts_limpar_expirados()
+    with _tts_cache_lock:
+        _tts_cache[token] = (texto_preparado, _time.time())
+
+    return jsonify({'token': token})
+
+
+@app.route('/tts/audio/<token>')
+@login_required
+def tts_audio(token):
+    """Streama o áudio MP3 diretamente — o browser começa a tocar enquanto baixa."""
+    import asyncio
+    import edge_tts
+
+    with _tts_cache_lock:
+        entry = _tts_cache.get(token)
+    if not entry:
+        return jsonify({'erro': 'token inválido ou expirado'}), 404
+
+    texto, ts = entry
+    if _time.time() - ts > _TTS_TOKEN_TTL:
+        with _tts_cache_lock:
+            _tts_cache.pop(token, None)
+        return jsonify({'erro': 'token expirado'}), 404
+
+    # Consome o token (uso único)
+    with _tts_cache_lock:
+        _tts_cache.pop(token, None)
 
     async def _stream_gen():
         communicate = edge_tts.Communicate(texto, EDGE_TTS_VOICE)
@@ -2361,7 +2402,14 @@ def tts():
         finally:
             loop.close()
 
-    return Response(_sync_gen(), mimetype='audio/mpeg')
+    return Response(
+        _sync_gen(),
+        mimetype='audio/mpeg',
+        headers={
+            'Cache-Control': 'no-store',
+            'X-Content-Type-Options': 'nosniff',
+        }
+    )
 
 
 # ============================================================

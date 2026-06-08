@@ -742,6 +742,64 @@
         #chat-card .aguardando-lista { color: #777; }
         #chat-card .aguardando-lista span::before { color: #555; }
         #chat-card .aguardando-lista span.respondido::before { color: #aaa; }
+
+        /* ----- Player TTS ----- */
+        .tts-player {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 6px 0 2px;
+        }
+        .tts-btn {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            border: 1px solid var(--borda-ouro);
+            background: none;
+            color: var(--ouro);
+            font-size: 11px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s, border-color 0.2s;
+            padding: 0;
+        }
+        .tts-btn:hover { background: rgba(201,169,110,0.12); border-color: var(--ouro); }
+        .tts-btn:disabled { opacity: 0.35; cursor: default; }
+        .tts-track-wrap {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            min-width: 0;
+        }
+        .tts-player.tocando .tts-track-wrap { display: flex; }
+        .tts-track {
+            flex: 1;
+            height: 2px;
+            background: #333;
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .tts-progress {
+            position: absolute; left: 0; top: 0; bottom: 0;
+            background: var(--ouro);
+            width: 0%;
+            transition: width 0.25s linear;
+        }
+        .tts-time {
+            color: #666;
+            font-family: Inter, sans-serif;
+            font-size: 11px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        @keyframes tts-pulse {
+            0%, 100% { opacity: 1; } 50% { opacity: 0.35; }
+        }
+        .tts-btn.carregando { animation: tts-pulse 1s ease-in-out infinite; }
     </style>
 </head>
 <body>
@@ -2547,26 +2605,63 @@
             return div;
         }
 
-        let _audioAtual = null;
+        let _audioAtual = null;  // { audio: HTMLAudioElement, player: HTMLElement }
 
-        /** Adiciona botões ▶ OUVIR / ⏸ a qualquer elemento container */
+        /** Adiciona player TTS (▶ track ⏸) a qualquer container */
         function _adicionarBotaoTTS(container, textoHTML) {
-            const btnStyle = "margin-top:8px;background:none;border:1px solid #444;color:#888;border-radius:4px;padding:3px 10px;font-size:0.75rem;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px;opacity:0.8;";
+            const player = document.createElement('div');
+            player.className = 'tts-player';
+
             const btnPlay = document.createElement('button');
-            btnPlay.textContent = '▶ OUVIR';
+            btnPlay.className = 'tts-btn';
             btnPlay.title = 'Ouvir narração';
-            btnPlay.style.cssText = btnStyle;
+            btnPlay.textContent = '▶';
+
+            const trackWrap = document.createElement('div');
+            trackWrap.className = 'tts-track-wrap';
+            const track = document.createElement('span');
+            track.className = 'tts-track';
+            const progress = document.createElement('span');
+            progress.className = 'tts-progress';
+            track.appendChild(progress);
+            const timeLabel = document.createElement('span');
+            timeLabel.className = 'tts-time';
+            trackWrap.appendChild(track);
+            trackWrap.appendChild(timeLabel);
+
             const btnPause = document.createElement('button');
-            btnPause.textContent = '⏸';
+            btnPause.className = 'tts-btn';
             btnPause.title = 'Pausar / Continuar';
-            btnPause.style.cssText = btnStyle + "margin-left:4px;display:none;";
-            btnPlay.onclick = () => reproduzirTTS(btnPlay, btnPause, textoHTML);
-            container.appendChild(btnPlay);
-            container.appendChild(btnPause);
+            btnPause.textContent = '⏸';
+            btnPause.style.display = 'none';
+
+            player.appendChild(btnPlay);
+            player.appendChild(trackWrap);
+            player.appendChild(btnPause);
+            container.appendChild(player);
+
+            btnPlay.onclick = () => reproduzirTTS(player, btnPlay, btnPause, progress, timeLabel, textoHTML);
         }
 
-        async function reproduzirTTS(botao, btnPause, textoComTags) {
-            if (_audioAtual) { _audioAtual.pause(); _audioAtual = null; }
+        function _fmtTempo(seg) {
+            const m = Math.floor(seg / 60);
+            const s = Math.floor(seg % 60);
+            return m + ':' + String(s).padStart(2, '0');
+        }
+
+        async function reproduzirTTS(player, btnPlay, btnPause, progressEl, timeLabel, textoComTags) {
+            // Para qualquer áudio em andamento
+            if (_audioAtual) {
+                _audioAtual.audio.pause();
+                _audioAtual.audio.src = '';
+                _audioAtual.player.classList.remove('tocando');
+                _audioAtual.player.querySelector('.tts-btn').textContent = '▶';
+                _audioAtual.player.querySelector('.tts-btn').style.display = '';
+                const pb = _audioAtual.player.querySelector('.tts-btn:last-child');
+                if (pb) pb.style.display = 'none';
+                _audioAtual = null;
+            }
+
             const textoPlano = textoComTags
                 .replace(/<br\s*\/?>/gi, '\n')
                 .replace(/<hr[^>]*>/gi, '\n\n')
@@ -2574,58 +2669,97 @@
                 .replace(/ {2,}/g, ' ')
                 .replace(/\n{3,}/g, '\n\n')
                 .trim();
-            const labelOrig = botao.textContent;
-            botao.textContent = '⏳ CARREGANDO...';
-            botao.disabled = true;
-            btnPause.style.display = 'none';
+
+            // Estado: carregando
+            btnPlay.classList.add('carregando');
+            btnPlay.disabled = true;
+
+            let token;
             try {
                 const resp = await fetch('/tts', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({texto: textoPlano})
                 });
-                if (!resp.ok) {
-                    botao.textContent = '✗ ERRO';
-                    setTimeout(() => { botao.textContent = labelOrig; botao.disabled = false; }, 4000);
-                    return;
-                }
-                const blob = await resp.blob();
-                const url = URL.createObjectURL(blob);
-                _audioAtual = new Audio(url);
-                _audioAtual.onended = () => {
-                    botao.textContent = labelOrig;
-                    botao.disabled = false;
-                    botao.onclick = () => reproduzirTTS(botao, btnPause, textoComTags);
-                    btnPause.style.display = 'none';
-                    URL.revokeObjectURL(url);
-                };
-                _audioAtual.play();
-                botao.textContent = '■ PARAR';
-                botao.disabled = false;
-                botao.onclick = () => {
-                    _audioAtual.pause();
-                    _audioAtual = null;
-                    botao.textContent = labelOrig;
-                    botao.onclick = () => reproduzirTTS(botao, btnPause, textoComTags);
-                    btnPause.style.display = 'none';
-                };
-
-                // Botão de pausa/continuar
-                btnPause.style.display = 'inline-block';
-                btnPause.textContent = '⏸';
-                btnPause.onclick = () => {
-                    if (_audioAtual.paused) {
-                        _audioAtual.play();
-                        btnPause.textContent = '⏸';
-                    } else {
-                        _audioAtual.pause();
-                        btnPause.textContent = '▶';
-                    }
-                };
+                if (!resp.ok) throw new Error('erro');
+                const d = await resp.json();
+                token = d.token;
             } catch(e) {
-                botao.textContent = '✗ ERRO';
-                setTimeout(() => { botao.textContent = labelOrig; botao.disabled = false; }, 3000);
+                btnPlay.classList.remove('carregando');
+                btnPlay.disabled = false;
+                btnPlay.textContent = '✗';
+                setTimeout(() => { btnPlay.textContent = '▶'; }, 3000);
+                return;
             }
+
+            // Cria elemento de áudio apontando para o stream
+            const audio = new Audio('/tts/audio/' + token);
+            _audioAtual = { audio, player };
+
+            // Atualiza progresso
+            audio.addEventListener('timeupdate', () => {
+                if (!audio.duration) return;
+                const pct = (audio.currentTime / audio.duration) * 100;
+                progressEl.style.width = pct + '%';
+                timeLabel.textContent = _fmtTempo(audio.currentTime) + ' / ' + _fmtTempo(audio.duration);
+            });
+
+            audio.addEventListener('canplay', () => {
+                // Começa a tocar assim que tem dados suficientes
+                btnPlay.classList.remove('carregando');
+                btnPlay.disabled = false;
+                btnPlay.textContent = '■';
+                btnPause.style.display = '';
+                player.classList.add('tocando');
+                audio.play().catch(() => {});
+            });
+
+            audio.addEventListener('ended', () => {
+                player.classList.remove('tocando');
+                progressEl.style.width = '100%';
+                setTimeout(() => {
+                    progressEl.style.width = '0%';
+                    timeLabel.textContent = '';
+                    btnPlay.textContent = '▶';
+                    btnPause.style.display = 'none';
+                }, 600);
+                _audioAtual = null;
+            });
+
+            audio.addEventListener('error', () => {
+                btnPlay.classList.remove('carregando');
+                btnPlay.disabled = false;
+                btnPlay.textContent = '✗';
+                setTimeout(() => { btnPlay.textContent = '▶'; }, 3000);
+                player.classList.remove('tocando');
+                _audioAtual = null;
+            });
+
+            // Parar
+            btnPlay.onclick = () => {
+                audio.pause();
+                audio.src = '';
+                player.classList.remove('tocando');
+                progressEl.style.width = '0%';
+                timeLabel.textContent = '';
+                btnPlay.textContent = '▶';
+                btnPause.style.display = 'none';
+                _audioAtual = null;
+                btnPlay.onclick = () => reproduzirTTS(player, btnPlay, btnPause, progressEl, timeLabel, textoComTags);
+            };
+
+            // Pausa / continua
+            btnPause.onclick = () => {
+                if (audio.paused) { audio.play(); btnPause.textContent = '⏸'; }
+                else { audio.pause(); btnPause.textContent = '▶'; }
+            };
+
+            // Seek por clique na track
+            progressEl.parentElement.onclick = (e) => {
+                if (!audio.duration) return;
+                const rect = progressEl.parentElement.getBoundingClientRect();
+                audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+            };
         }
 
         /* ---------- AÇÃO PENDENTE (CONFIRMAÇÃO) ---------- */
