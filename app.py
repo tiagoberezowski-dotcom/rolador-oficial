@@ -354,6 +354,11 @@ def init_db():
             con.execute('ALTER TABLE fichas ADD COLUMN avatar TEXT DEFAULT ""')
         except sqlite3.OperationalError:
             pass  # coluna já existe
+        # Migration: adiciona coluna capa à tabela fichas
+        try:
+            con.execute('ALTER TABLE fichas ADD COLUMN capa TEXT DEFAULT ""')
+        except sqlite3.OperationalError:
+            pass
         con.commit()
     # WAL mode deve ser ativado fora de transação
     con2 = sqlite3.connect(DB_PATH, timeout=10)
@@ -573,7 +578,7 @@ Você é o **Narrador**: simulador justo e indiferente de um mundo vivo de *V5* 
 
 **Dois jogadores, uma coterie:** os dois personagens existem no mesmo espaço-tempo. Eles podem agir juntos, separados ou em oposição. Quando agirem em cenas separadas simultâneas, narre uma por vez, corte entre elas e mantenha a tensão nos dois fios.
 
-**Sua voz:** narrador de sobrancelha arqueada — lúcido, irônico, sensorial. Prosa densa, gótico-punk, decadente e melancólica, em **segunda pessoa plural ou individual conforme a cena**, tempo presente. Você descreve o mundo com peso físico: o cheiro de pedra úmida e chumbo no ar de Varsóvia no inverno, o brilho partido dos néons refletidos nas poças da Śródmieście, o silêncio pesado de uma Elysium cheia de mortos que sobreviveram à guerra, a fome ardendo como brasa atrás do esterno.
+**Sua voz:** narrador de sobrancelha arqueada — lúcido, irônico, sensorial. Prosa densa, gótico-punk, decadente e melancólica, em **segunda pessoa plural ou individual conforme a cena**, tempo presente. Você descreve o mundo com peso físico: o cheiro de pedra úmida e chumbo no ar de Varsóvia no inverno, o brilho partido dos néons refletidos nas poças da Śródmieście, o silêncio pesado de uma Elysium cheia de mortos que sobreviveram à guerra, a fome ardendo como brasa atrás do esterno. **Nunca use markdown na narração:** a prosa narrativa é pura — sem `**`, `*`, `###` ou `` ` ``. Esses símbolos são para este documento de instruções, não para o texto que os jogadores leem.
 
 Você **nunca sai do personagem de Narrador**, exceto quando algum jogador escrever `[OOC]` (para tratar de regras, ritmo ou limites).
 
@@ -1038,6 +1043,7 @@ Nunca termine com resolução, alívio, ou confirmação de que tudo está bem. 
 9. Criar consequências sem que o jogador tenha tido escolha real — se não havia escolha, não era um dilema.
 10. Narrar em flashback ou explicar o passado de forma expositiva — o passado emerge por ação, detalhe e diálogo, não por parágrafo de contexto.
 11. Escrever respostas longas — o limite é 6 parágrafos no total (até 3 por jogador). Brevidade é poder.
+12. Usar símbolos de formatação markdown no texto narrativo: `**`, `*`, `###`, `##`, `` ` ``. A narração é literatura, não documentação técnica. Jamais escreva "**Você** sente" onde deveria estar "Você sente". A prosa não tem cerquilha, asteriscos nem código inline.
 
 ---
 
@@ -1258,13 +1264,17 @@ def stream_chat():
             broadcast({"tipo": "mestre_inicio"})
 
             stream_obj = gerar_resposta_ia(acoes_snapshot, stream=True)
+            _pensando_sinalizado = False
             for chunk in stream_obj:
                 d = chunk.choices[0].delta
                 # v4-pro é modelo de raciocínio: emite reasoning_content antes do texto.
+                # O raciocínio interno contém plot secrets — não é exibido aos jogadores.
+                # Apenas sinalizamos "está pensando" uma vez para ativar a animação.
                 raciocinio = getattr(d, 'reasoning_content', None)
                 if raciocinio:
-                    yield f"data: {json.dumps({'pensando': raciocinio})}\n\n"
-                    broadcast({"tipo": "mestre_pensando", "delta": raciocinio})
+                    if not _pensando_sinalizado:
+                        yield f"data: {json.dumps({'pensando': '...'})}\n\n"
+                        _pensando_sinalizado = True
                     continue
 
                 delta = d.content
@@ -1480,7 +1490,28 @@ def _lista_de_d10_valida(lista):
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html', jogador=session['jogador'])
+    info_personagem = {
+        'Lior': 'Malkavian · Ancilla · Sandman',
+        'Fryderyk': 'Toreador · Ancilla · Osiris',
+    }
+    nome_completo = {
+        'Lior': 'Lior Kovalenko',
+        'Fryderyk': 'Fryderyk Rozynski',
+    }
+    bane = {
+        'Lior': 'Fractured Perspective',
+        'Fryderyk': 'Aesthetic Fixation',
+    }
+    resonance = {
+        'Lior': 'None',
+        'Fryderyk': 'None',
+    }
+    return render_template('index.html',
+        jogador=session['jogador'],
+        info=info_personagem.get(session['jogador'], ''),
+        nome=nome_completo.get(session['jogador'], session['jogador'].upper()),
+        bane=bane.get(session['jogador'], ''),
+        resonance=resonance.get(session['jogador'], ''))
 
 
 @app.route('/rede.html')
@@ -1812,9 +1843,9 @@ def iniciar_sessao():
             stream_obj = gerar_resposta_ia(trigger, stream=True)
             for chunk in stream_obj:
                 d = chunk.choices[0].delta
+                # reasoning_content contém plot secrets — suprimido completamente.
                 raciocinio = getattr(d, 'reasoning_content', None)
                 if raciocinio:
-                    broadcast({"tipo": "mestre_pensando", "delta": raciocinio})
                     continue
                 delta = d.content
                 if not delta:
@@ -1922,13 +1953,16 @@ def resumo_sessao():
 def get_ficha():
     jogador = session['jogador']
     with _db() as con:
-        row = con.execute('SELECT dados, avatar FROM fichas WHERE jogador = ?', (jogador,)).fetchone()
+        row = con.execute('SELECT dados, avatar, capa FROM fichas WHERE jogador = ?', (jogador,)).fetchone()
     if not row:
         return jsonify({'dados': {}})
     dados = json.loads(row[0]) if row[0] else {}
     avatar = row[1] or ''
+    capa = row[2] or ''
     if avatar:
         dados['avatar'] = avatar
+    if capa:
+        dados['capa'] = capa
     return jsonify({'dados': dados})
 
 
@@ -1949,17 +1983,22 @@ def get_avatar():
 @app.route('/avatar', methods=['POST'])
 @login_required
 def save_avatar():
-    """Salva o avatar do jogador logado."""
+    """Salva o avatar OU capa do jogador logado."""
     dados = request.get_json(silent=True) or {}
     avatar = (dados.get('avatar') or '').strip()
+    capa = (dados.get('capa') or '').strip()
     jogador = session['jogador']
-    if not avatar:
-        return jsonify({'erro': 'Avatar vazio'}), 400
     with _db() as con:
-        con.execute(
-            'UPDATE fichas SET avatar = ?, atualizado_em = datetime("now","localtime") WHERE jogador = ?',
-            (avatar, jogador)
-        )
+        if avatar:
+            con.execute(
+                'UPDATE fichas SET avatar = ?, atualizado_em = datetime("now","localtime") WHERE jogador = ?',
+                (avatar, jogador)
+            )
+        if capa:
+            con.execute(
+                'UPDATE fichas SET capa = ?, atualizado_em = datetime("now","localtime") WHERE jogador = ?',
+                (capa, jogador)
+            )
         con.commit()
     return jsonify({'status': 'ok'})
 
@@ -1972,9 +2011,10 @@ def save_ficha():
     ficha = dados.get('ficha')
     if not jogador or ficha is None:
         return jsonify({'erro': 'Dados invalidos'}), 400
-    # Avatar e salvo separadamente via POST /avatar — nao vai no JSON da ficha
+    # Avatar e capa sao salvos separadamente — nao vao no JSON da ficha
     if isinstance(ficha, dict):
         ficha.pop('avatar', None)
+        ficha.pop('capa', None)
     with _db() as con:
         con.execute(
             '''INSERT INTO fichas (jogador, dados) VALUES (?, ?)
@@ -2130,12 +2170,14 @@ def _processar_tags_mundo(texto):
     return texto_limpo, mudou
 
 
-def _custo_xp(jogador, stat):
+def _custo_xp(jogador, stat, nivel_novo):
+    # V5 oficial: custo = novo_nível × multiplicador
     if stat in _ATTRIBUTES:
-        return 5
+        return nivel_novo * 5
     if stat in _DISCIPLINES:
-        return 3 if stat in _INCLAN.get(jogador, set()) else 5
-    return 3  # Skills
+        mult = 5 if stat in _INCLAN.get(jogador, set()) else 7
+        return nivel_novo * mult
+    return nivel_novo * 3  # Skills
 
 
 @app.route('/xp', methods=['GET'])
@@ -2186,7 +2228,7 @@ def xp_comprar():
     nivel_atual = int(dados.get('nivel_atual', 0))
     if not stat or nivel_atual >= 5:
         return jsonify({'erro': 'Dados inválidos'}), 400
-    custo = _custo_xp(jogador, stat)
+    custo = _custo_xp(jogador, stat, nivel_atual + 1)
     with _db() as con:
         row = con.execute('SELECT disponivel FROM xp WHERE jogador = ?', (jogador,)).fetchone()
         disponivel = row[0] if row else 0
@@ -2282,31 +2324,44 @@ def tts():
     if not texto:
         return jsonify({'erro': 'texto vazio'}), 400
 
-    # Narra o primeiro parágrafo. Se for muito longo, corta no FIM de uma frase
-    # (nunca no meio de uma palavra) para não interromper a narração abruptamente.
-    primeiro_paragrafo = texto.split('\n\n')[0].strip()
-    if len(primeiro_paragrafo) > 1000:
-        corte = primeiro_paragrafo[:1000]
-        fim_frase = max(corte.rfind('. '), corte.rfind('! '), corte.rfind('? '))
-        primeiro_paragrafo = corte[:fim_frase + 1] if fim_frase > 100 else corte
-    texto = _strip_audio_tags(primeiro_paragrafo)
+    LIMITE_CHARS = 5000
+    paragrafos = texto.split('\n\n')
+    acumulado = ''
+    for p in paragrafos:
+        if len(acumulado) + len(p) + 2 <= LIMITE_CHARS:
+            acumulado += ('\n\n' if acumulado else '') + p
+        else:
+            break
 
-    async def _gerar():
+    if not acumulado:
+        corte = texto[:LIMITE_CHARS]
+        fim_frase = max(corte.rfind('. '), corte.rfind('! '), corte.rfind('? '), corte.rfind('.\n'))
+        if fim_frase > 100:
+            acumulado = corte[:fim_frase + 1]
+        else:
+            acumulado = corte
+
+    texto = _strip_audio_tags(acumulado)
+
+    async def _stream_gen():
         communicate = edge_tts.Communicate(texto, EDGE_TTS_VOICE)
-        buf = io.BytesIO()
         async for chunk in communicate.stream():
             if chunk['type'] == 'audio':
-                buf.write(chunk['data'])
-        buf.seek(0)
-        return buf.read()
+                yield chunk['data']
 
-    try:
-        audio_bytes = asyncio.run(_gerar())
-    except Exception as e:
-        app.logger.error("Erro TTS: %s", e)
-        return jsonify({'erro': str(e)}), 500
+    def _sync_gen():
+        loop = asyncio.new_event_loop()
+        async_gen = _stream_gen()
+        try:
+            while True:
+                chunk = loop.run_until_complete(async_gen.__anext__())
+                yield chunk
+        except StopAsyncIteration:
+            pass
+        finally:
+            loop.close()
 
-    return Response(audio_bytes, mimetype='audio/mpeg')
+    return Response(_sync_gen(), mimetype='audio/mpeg')
 
 
 # ============================================================
