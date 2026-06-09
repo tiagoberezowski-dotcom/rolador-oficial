@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — VTM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ouro: #c9a96e;
+            --sangue: #b3001b;
+            --bg: #0a0a0a;
+            --card: #111;
+            --borda: #8a7340;
+            --texto: #cbb890;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--texto);
+            font-family: 'Crimson Text', serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .box {
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid var(--borda);
+            border-radius: 8px;
+            padding: 36px 28px;
+            background: var(--card);
+            box-shadow: 0 0 40px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+        h1 {
+            font-family: 'Cinzel', serif;
+            color: var(--sangue);
+            font-size: 1.1rem;
+            letter-spacing: 6px;
+            text-align: center;
+        }
+        .sub {
+            font-family: 'Cinzel', serif;
+            color: #444;
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            text-align: center;
+            margin-top: -16px;
+        }
+        input[type="password"] {
+            width: 100%;
+            background: #000;
+            border: 1px solid var(--borda);
+            color: #e0e0e0;
+            font-family: 'Crimson Text', serif;
+            font-size: 1rem;
+            padding: 12px 14px;
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type="password"]:focus { border-color: var(--ouro); }
+        button {
+            width: 100%;
+            background: var(--sangue);
+            color: #fff;
+            border: 1px solid var(--sangue);
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.85; }
+        .erro {
+            color: #e05050;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+        hr { width: 100%; border: none; border-top: 1px solid #2a2a2a; }
+    </style>
+</head>
+<body>
+<div class="box">
+    <h1>ACESSO RESTRITO</h1>
+    <p class="sub">painel do narrador</p>
+    <hr>
+    {% if erro %}
+    <p class="erro">{{ erro }}</p>
+    {% endif %}
+    <form method="POST" style="width:100%; display:flex; flex-direction:column; gap:16px;">
+        <input type="password" name="senha" placeholder="Senha mestre" autofocus
+               onkeydown="if(event.key==='Enter') this.form.submit()">
+        <button type="submit">ENTRAR</button>
+    </form>
+</div>
+</body>
+</html>

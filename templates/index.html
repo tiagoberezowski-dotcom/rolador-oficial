@@ -1114,28 +1114,6 @@
         </div>
 
 <!-- CHAT DO RPG -->
-        <!-- Modal Novo Arco -->
-        <div class="modal-overlay" id="modal-novo-arco">
-            <div class="modal-box" style="max-width:420px; gap:16px;">
-                <div class="modal-titulo" style="letter-spacing:4px; font-size:0.95rem; color:#c05050;">NOVO ARCO</div>
-                <p style="font-family:'Crimson Text',serif; color:#888; font-size:0.95rem; font-style:italic; text-align:center; margin:0; line-height:1.6;">
-                    Toda a história será apagada permanentemente.<br>
-                    Fichas e XP são preservados.<br>
-                    Esta ação não pode ser desfeita.
-                </p>
-                <input id="novo-arco-senha" type="password" placeholder="Senha mestre"
-                    style="background:#000; border:1px solid #c05050; color:#e0e0e0;
-                           font-family:'Crimson Text',serif; font-size:1rem; padding:12px 14px;
-                           border-radius:5px; width:100%; box-sizing:border-box; outline:none;"
-                    onfocus="this.style.borderColor='#e07070'"
-                    onblur="this.style.borderColor='#c05050'"
-                    onkeydown="if(event.key==='Enter') confirmarNovoArco(); if(event.key==='Escape') fecharModalNovoArco();">
-                <div class="modal-btns">
-                    <button class="btn" style="background:#c05050; color:#fff; border-color:#c05050;" onclick="confirmarNovoArco()">APAGAR E RECOMEÇAR</button>
-                    <button class="btn btn-secundario" onclick="fecharModalNovoArco()">CANCELAR</button>
-                </div>
-            </div>
-        </div>
 
         <!-- Modal Encerrar Sessão -->
         <!-- Modal Input Genérico -->
@@ -1252,7 +1230,6 @@
             <div class="hist-header">
                 <h2>MESA VIRTUAL (CHAT)</h2>
                 <div style="display:flex; gap:8px;">
-                    <button class="btn btn-secundario" style="flex:0; padding:6px 14px; font-size:0.8rem; color:#c05050; border-color:#c05050;" onclick="abrirModalNovoArco()" title="Apaga toda a história e inicia um novo arco">NOVO ARCO</button>
                     <button class="btn btn-secundario" style="flex:0; padding:6px 14px; font-size:0.8rem;" onclick="abrirModalSessao()">ENCERRAR SESSÃO</button>
                 </div>
             </div>
@@ -4336,37 +4313,6 @@
         // Heartbeat a cada 8s
         pingPresenca();
         setInterval(() => pingPresenca(_estaTyping), 8000);
-
-        /* ---------- NOVO ARCO ---------- */
-        function abrirModalNovoArco() {
-            document.getElementById('novo-arco-senha').value = '';
-            document.getElementById('modal-novo-arco').classList.add('ativo');
-            setTimeout(() => document.getElementById('novo-arco-senha').focus(), 100);
-        }
-
-        function fecharModalNovoArco() {
-            document.getElementById('modal-novo-arco').classList.remove('ativo');
-        }
-
-        async function confirmarNovoArco() {
-            const senha = document.getElementById('novo-arco-senha').value.trim();
-            if (!senha) return;
-            try {
-                const resp = await fetch('/reset_cronica', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ senha })
-                });
-                if (resp.ok) {
-                    fecharModalNovoArco();
-                } else {
-                    const data = await resp.json();
-                    alert(data.erro || 'Senha incorreta.');
-                }
-            } catch (e) {
-                alert('Erro de conexão.');
-            }
-        }
 
         /* ---------- ENCERRAR SESSÃO ---------- */
         async function abrirModalSessao() {

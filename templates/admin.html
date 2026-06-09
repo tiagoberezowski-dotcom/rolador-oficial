@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — VTM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ouro: #c9a96e;
+            --ouro-claro: #e0c594;
+            --sangue: #b3001b;
+            --bg: #0a0a0a;
+            --card: #111;
+            --card2: #161616;
+            --borda: #8a7340;
+            --borda-fraca: #2a2a2a;
+            --texto: #cbb890;
+            --texto-fraco: #666;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--texto);
+            font-family: 'Crimson Text', serif;
+            min-height: 100vh;
+            padding: 24px 16px 60px;
+        }
+        .container { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+        /* HEADER */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--borda-fraca);
+            padding-bottom: 16px;
+        }
+        .page-title {
+            font-family: 'Cinzel', serif;
+            color: var(--sangue);
+            font-size: 1rem;
+            letter-spacing: 5px;
+        }
+        .page-sub {
+            font-family: 'Cinzel', serif;
+            color: var(--texto-fraco);
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+            margin-top: 4px;
+        }
+        .btn-sair {
+            font-family: 'Cinzel', serif;
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            color: var(--texto-fraco);
+            background: none;
+            border: 1px solid var(--borda-fraca);
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-sair:hover { color: var(--ouro); border-color: var(--borda); }
+
+        /* CARD */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--borda-fraca);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .card.alerta { border-color: #5a1a1a; }
+
+        details { width: 100%; }
+        summary {
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            color: var(--ouro);
+            padding: 16px 20px;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: '▸'; color: var(--texto-fraco); font-size: 0.7rem; transition: transform 0.2s; }
+        details[open] summary::after { transform: rotate(90deg); }
+        .card.alerta summary { color: #e05050; }
+
+        .card-body { padding: 20px; border-top: 1px solid var(--borda-fraca); display: flex; flex-direction: column; gap: 16px; }
+
+        /* AVISO */
+        .aviso {
+            font-size: 0.85rem;
+            color: var(--texto-fraco);
+            font-style: italic;
+            line-height: 1.5;
+            padding: 10px 14px;
+            border-left: 2px solid var(--borda-fraca);
+        }
+        .aviso.vermelho { border-color: #5a1a1a; color: #c06060; }
+
+        /* JOGADOR PAIR */
+        .jogadores-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 600px) { .jogadores-grid { grid-template-columns: 1fr; } }
+
+        .jogador-card {
+            background: var(--card2);
+            border: 1px solid var(--borda-fraca);
+            border-radius: 6px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .jogador-nome {
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            letter-spacing: 3px;
+            color: var(--ouro);
+        }
+        .jogador-info { font-size: 0.82rem; color: var(--texto-fraco); }
+
+        /* FORM ELEMENTS */
+        label {
+            font-family: 'Cinzel', serif;
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+            color: var(--texto-fraco);
+            display: block;
+            margin-bottom: 4px;
+        }
+        input[type="number"], input[type="text"], input[type="password"], textarea, select {
+            background: #000;
+            border: 1px solid var(--borda-fraca);
+            color: #e0e0e0;
+            font-family: 'Crimson Text', serif;
+            font-size: 0.95rem;
+            padding: 8px 10px;
+            border-radius: 4px;
+            width: 100%;
+            outline: none;
+        }
+        input[type="number"] { width: 80px; }
+        input:focus, textarea:focus, select:focus { border-color: var(--borda); }
+        textarea { resize: vertical; min-height: 200px; font-size: 0.82rem; font-family: monospace; line-height: 1.5; }
+
+        .field-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+        .field-group { display: flex; flex-direction: column; }
+
+        /* BUTTONS */
+        .btn {
+            font-family: 'Cinzel', serif;
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid var(--borda);
+            background: none;
+            color: var(--ouro);
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        .btn:hover { background: rgba(201,169,110,0.08); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-perigo { border-color: #5a1a1a; color: #e05050; }
+        .btn-perigo:hover { background: rgba(176,0,27,0.1); }
+        .btn-acao { background: rgba(201,169,110,0.1); }
+
+        /* NOVO ARCO */
+        .novo-arco-aviso {
+            background: #0e0505;
+            border: 1px solid #3a0a0a;
+            border-radius: 6px;
+            padding: 14px 16px;
+            font-size: 0.88rem;
+            color: #c06060;
+            line-height: 1.6;
+        }
+        .novo-arco-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+
+        /* MUNDO / LISTA DE ITENS */
+        .mundo-lista { display: flex; flex-direction: column; gap: 10px; }
+        .mundo-item {
+            background: var(--card2);
+            border: 1px solid var(--borda-fraca);
+            border-radius: 5px;
+            padding: 12px 14px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .mundo-item-nome { font-size: 0.88rem; color: var(--texto); flex: 1; min-width: 120px; }
+        .mundo-vazio { color: var(--texto-fraco); font-size: 0.85rem; font-style: italic; }
+
+        /* FEEDBACK */
+        .flash {
+            font-family: 'Cinzel', serif;
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+            padding: 4px 8px;
+            border-radius: 3px;
+        }
+        .flash.ok { color: #60c060; }
+        .flash.err { color: #e05050; }
+
+        hr { border: none; border-top: 1px solid var(--borda-fraca); }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- HEADER -->
+    <div class="page-header">
+        <div>
+            <div class="page-title">PAINEL DO NARRADOR</div>
+            <div class="page-sub">chave de emergência — não é para uso rotineiro</div>
+        </div>
+        <a href="/admin/logout" class="btn-sair">SAIR</a>
+    </div>
+
+    <!-- 1. NOVO ARCO -->
+    <div class="card alerta">
+        <details>
+            <summary>NOVO ARCO — reset da crônica</summary>
+            <div class="card-body">
+                <div class="novo-arco-aviso">
+                    Toda a história narrada será apagada permanentemente:<br>
+                    mensagens, rolagens, relógios, sementes, notas, prestação, session_log.<br><br>
+                    <strong style="color:#e0e0e0;">O que é preservado:</strong> fichas, XP, fotos dos personagens e PINs de login.
+                </div>
+                <div class="novo-arco-form">
+                    <div class="field-group">
+                        <label for="na-confirma">CONFIRME digitando NOVO ARCO</label>
+                        <input type="text" id="na-confirma" placeholder="NOVO ARCO" style="width:180px;">
+                    </div>
+                    <div class="field-group">
+                        <label for="na-senha">SENHA MESTRE</label>
+                        <input type="password" id="na-senha" placeholder="••••••" style="width:160px;">
+                    </div>
+                    <button class="btn btn-perigo" onclick="confirmarNovoArco()">APAGAR E RECOMEÇAR</button>
+                    <span id="na-flash" class="flash" style="display:none"></span>
+                </div>
+            </div>
+        </details>
+    </div>
+
+    <!-- 2. CONCEDER XP -->
+    <div class="card">
+        <details>
+            <summary>CONCEDER XP</summary>
+            <div class="card-body">
+                <p class="aviso">Use apenas para corrigir falha na concessão automática via tag [XP:].</p>
+                <div class="jogadores-grid">
+                    {% for jogador in ['Lior', 'Fryderyk'] %}
+                    <div class="jogador-card">
+                        <div class="jogador-nome">{{ jogador }}</div>
+                        <div class="jogador-info">
+                            Disponível: <strong>{{ xp[jogador]['disponivel'] }}</strong> XP &nbsp;|&nbsp;
+                            Total ganho: {{ xp[jogador]['total_ganho'] }}
+                        </div>
+                        <div class="field-row">
+                            <div class="field-group">
+                                <label>QUANTIDADE</label>
+                                <input type="number" id="xp-qtd-{{ jogador }}" value="1" min="1" max="99">
+                            </div>
+                            <div class="field-group" style="flex:1">
+                                <label>DESCRIÇÃO</label>
+                                <input type="text" id="xp-desc-{{ jogador }}" placeholder="motivo do ajuste">
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button class="btn btn-acao" onclick="concederXP('{{ jogador }}')">CONCEDER</button>
+                            <span id="xp-flash-{{ jogador }}" class="flash" style="display:none"></span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </details>
+    </div>
+
+    <!-- 3. RECURSOS / FOME -->
+    <div class="card">
+        <details>
+            <summary>RECURSOS E FOME</summary>
+            <div class="card-body">
+                <p class="aviso">Use apenas para corrigir valores que a tag automática não atualizou corretamente.</p>
+                <div class="jogadores-grid">
+                    {% for jogador in ['Lior', 'Fryderyk'] %}
+                    <div class="jogador-card">
+                        <div class="jogador-nome">{{ jogador }}</div>
+                        <div class="field-row">
+                            <div class="field-group">
+                                <label>WILLPOWER</label>
+                                <input type="number" id="rec-wp-{{ jogador }}" value="{{ rec[jogador]['willpower'] }}" min="0" max="10">
+                            </div>
+                            <div class="field-group">
+                                <label>HEALTH</label>
+                                <input type="number" id="rec-hp-{{ jogador }}" value="{{ rec[jogador]['health'] }}" min="0" max="10">
+                            </div>
+                            <div class="field-group">
+                                <label>HUMANITY</label>
+                                <input type="number" id="rec-hum-{{ jogador }}" value="{{ rec[jogador]['humanity'] }}" min="0" max="10">
+                            </div>
+                            <div class="field-group">
+                                <label>HUNGER</label>
+                                <input type="number" id="rec-hun-{{ jogador }}" value="{{ rec[jogador]['hunger'] }}" min="0" max="5">
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button class="btn btn-acao" onclick="salvarRecursos('{{ jogador }}')">SALVAR</button>
+                            <span id="rec-flash-{{ jogador }}" class="flash" style="display:none"></span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </details>
+    </div>
+
+    <!-- 4. CÂNONE -->
+    <div class="card">
+        <details>
+            <summary>CÂNONE — memória de longo prazo da IA</summary>
+            <div class="card-body">
+                <p class="aviso vermelho">Edite apenas para corrigir erros factuais que a IA está perpetuando. Esta é a fonte primária de contexto persistente.</p>
+                <textarea id="canon-texto" placeholder="Carregando cânone..."></textarea>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <button class="btn btn-acao" onclick="salvarCanon()">SALVAR CÂNONE</button>
+                    <button class="btn" onclick="carregarCanon()" style="color:var(--texto-fraco)">RECARREGAR</button>
+                    <span id="canon-flash" class="flash" style="display:none"></span>
+                </div>
+            </div>
+        </details>
+    </div>
+
+    <!-- 5. ESTADO DO MUNDO -->
+    <div class="card">
+        <details>
+            <summary>ESTADO DO MUNDO — relógios, sementes, prestação</summary>
+            <div class="card-body">
+                <p class="aviso">O Mestre IA gerencia este estado automaticamente via tags de controle. Edite apenas para corrigir erros pontuais.</p>
+
+                <div>
+                    <div style="font-family:'Cinzel',serif; font-size:0.7rem; letter-spacing:2px; color:var(--texto-fraco); margin-bottom:10px;">RELÓGIOS</div>
+                    <div class="mundo-lista" id="lista-relogios"><p class="mundo-vazio">Carregando...</p></div>
+                </div>
+
+                <hr>
+
+                <div>
+                    <div style="font-family:'Cinzel',serif; font-size:0.7rem; letter-spacing:2px; color:var(--texto-fraco); margin-bottom:10px;">SEMENTES</div>
+                    <div class="mundo-lista" id="lista-sementes"><p class="mundo-vazio">Carregando...</p></div>
+                </div>
+
+                <hr>
+
+                <div>
+                    <div style="font-family:'Cinzel',serif; font-size:0.7rem; letter-spacing:2px; color:var(--texto-fraco); margin-bottom:10px;">PRESTAÇÃO</div>
+                    <div class="mundo-lista" id="lista-prestacao"><p class="mundo-vazio">Carregando...</p></div>
+                </div>
+            </div>
+        </details>
+    </div>
+
+</div><!-- /container -->
+
+<script>
+/* ──────────────────────────────────────────
+   UTILITÁRIOS
+─────────────────────────────────────────── */
+function flash(id, msg, tipo) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'flash ' + tipo;
+    el.style.display = 'inline';
+    setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+async function api(url, method, body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const resp = await fetch(url, opts);
+    return resp;
+}
+
+/* ──────────────────────────────────────────
+   NOVO ARCO
+─────────────────────────────────────────── */
+async function confirmarNovoArco() {
+    const confirma = document.getElementById('na-confirma').value.trim();
+    const senha = document.getElementById('na-senha').value.trim();
+    if (confirma !== 'NOVO ARCO') { flash('na-flash', 'Digite exatamente: NOVO ARCO', 'err'); return; }
+    if (!senha) { flash('na-flash', 'Informe a senha mestre', 'err'); return; }
+    const resp = await api('/reset_cronica', 'POST', { senha });
+    if (resp.ok) {
+        flash('na-flash', 'Crônica resetada.', 'ok');
+        document.getElementById('na-confirma').value = '';
+        document.getElementById('na-senha').value = '';
+    } else {
+        const d = await resp.json();
+        flash('na-flash', d.erro || 'Erro.', 'err');
+    }
+}
+
+/* ──────────────────────────────────────────
+   XP
+─────────────────────────────────────────── */
+async function concederXP(jogador) {
+    const qtd = parseInt(document.getElementById('xp-qtd-' + jogador).value) || 0;
+    const desc = document.getElementById('xp-desc-' + jogador).value.trim() || 'ajuste manual';
+    if (qtd <= 0) { flash('xp-flash-' + jogador, 'Quantidade inválida', 'err'); return; }
+    const senha = os_env_SENHA_MESTRE || prompt('Senha mestre:');
+    const resp = await api('/xp/conceder', 'POST', { jogador, quantidade: qtd, descricao: desc, senha });
+    if (resp.ok) {
+        flash('xp-flash-' + jogador, '+' + qtd + ' XP concedido', 'ok');
+        setTimeout(() => location.reload(), 1500);
+    } else {
+        const d = await resp.json();
+        flash('xp-flash-' + jogador, d.erro || 'Erro', 'err');
+    }
+}
+
+/* ──────────────────────────────────────────
+   RECURSOS
+─────────────────────────────────────────── */
+async function salvarRecursos(jogador) {
+    const body = {
+        jogador,
+        willpower: parseInt(document.getElementById('rec-wp-' + jogador).value),
+        health:    parseInt(document.getElementById('rec-hp-' + jogador).value),
+        humanity:  parseInt(document.getElementById('rec-hum-' + jogador).value),
+        hunger:    parseInt(document.getElementById('rec-hun-' + jogador).value),
+    };
+    const resp = await api('/admin/recursos', 'POST', body);
+    if (resp.ok) flash('rec-flash-' + jogador, 'Salvo.', 'ok');
+    else flash('rec-flash-' + jogador, 'Erro', 'err');
+}
+
+/* ──────────────────────────────────────────
+   CÂNONE
+─────────────────────────────────────────── */
+async function carregarCanon() {
+    const resp = await fetch('/canon');
+    const d = await resp.json();
+    document.getElementById('canon-texto').value = d.conteudo || '';
+}
+
+async function salvarCanon() {
+    const conteudo = document.getElementById('canon-texto').value.trim();
+    if (!conteudo) { flash('canon-flash', 'Conteúdo vazio', 'err'); return; }
+    const resp = await api('/admin/canon', 'PUT', { conteudo });
+    if (resp.ok) flash('canon-flash', 'Cânone salvo.', 'ok');
+    else flash('canon-flash', 'Erro', 'err');
+}
+
+/* ──────────────────────────────────────────
+   ESTADO DO MUNDO
+─────────────────────────────────────────── */
+async function carregarMundo() {
+    const resp = await fetch('/mundo');
+    const d = await resp.json();
+    renderRelogios(d.relogios || []);
+    renderSementes(d.sementes || []);
+    renderPrestacao(d.prestacao || []);
+}
+
+function renderRelogios(lista) {
+    const el = document.getElementById('lista-relogios');
+    if (!lista.length) { el.innerHTML = '<p class="mundo-vazio">Nenhum relógio ativo.</p>'; return; }
+    el.innerHTML = lista.map(r => `
+        <div class="mundo-item" id="rel-${r.id}">
+            <span class="mundo-item-nome">${escHtml(r.nome)}</span>
+            <div class="field-group">
+                <label>ATUAL</label>
+                <input type="number" id="rel-atual-${r.id}" value="${r.atual}" min="0" max="${r.maximo}" style="width:60px;">
+            </div>
+            <div class="field-group">
+                <label>MÁX</label>
+                <input type="number" id="rel-max-${r.id}" value="${r.maximo}" min="1" max="20" style="width:60px;">
+            </div>
+            <button class="btn btn-acao" onclick="salvarRelogio(${r.id})">OK</button>
+            <button class="btn btn-perigo" onclick="deletar('/admin/relogios/${r.id}', 'rel-${r.id}')">✕</button>
+            <span id="rel-flash-${r.id}" class="flash" style="display:none"></span>
+        </div>`).join('');
+}
+
+async function salvarRelogio(id) {
+    const atual  = parseInt(document.getElementById('rel-atual-' + id).value);
+    const maximo = parseInt(document.getElementById('rel-max-'   + id).value);
+    const resp = await api('/admin/relogios/' + id, 'PATCH', { atual, maximo });
+    if (resp.ok) flash('rel-flash-' + id, 'Salvo.', 'ok');
+    else flash('rel-flash-' + id, 'Erro', 'err');
+}
+
+function renderSementes(lista) {
+    const el = document.getElementById('lista-sementes');
+    if (!lista.length) { el.innerHTML = '<p class="mundo-vazio">Nenhuma semente.</p>'; return; }
+    el.innerHTML = lista.map(s => `
+        <div class="mundo-item" id="sem-${s.id}">
+            <span class="mundo-item-nome">${escHtml(s.descricao)}</span>
+            <div class="field-group">
+                <label>STATUS</label>
+                <select id="sem-st-${s.id}" style="width:140px;">
+                    ${['ativa','colhido','cancelada'].map(v => `<option value="${v}" ${s.status===v?'selected':''}>${v}</option>`).join('')}
+                </select>
+            </div>
+            <button class="btn btn-acao" onclick="salvarSemente(${s.id})">OK</button>
+            <button class="btn btn-perigo" onclick="deletar('/admin/sementes/${s.id}', 'sem-${s.id}')">✕</button>
+            <span id="sem-flash-${s.id}" class="flash" style="display:none"></span>
+        </div>`).join('');
+}
+
+async function salvarSemente(id) {
+    const status = document.getElementById('sem-st-' + id).value;
+    const resp = await api('/admin/sementes/' + id, 'PATCH', { status });
+    if (resp.ok) flash('sem-flash-' + id, 'Salvo.', 'ok');
+    else flash('sem-flash-' + id, 'Erro', 'err');
+}
+
+function renderPrestacao(lista) {
+    const el = document.getElementById('lista-prestacao');
+    if (!lista.length) { el.innerHTML = '<p class="mundo-vazio">Nenhuma prestação.</p>'; return; }
+    el.innerHTML = lista.map(p => `
+        <div class="mundo-item" id="pre-${p.id}">
+            <span class="mundo-item-nome">${escHtml(p.devedor)} → ${escHtml(p.credor)}</span>
+            <div class="field-group">
+                <label>NÍVEL</label>
+                <input type="number" id="pre-niv-${p.id}" value="${p.nivel}" min="1" max="5" style="width:60px;">
+            </div>
+            <div class="field-group">
+                <label>STATUS</label>
+                <select id="pre-st-${p.id}" style="width:120px;">
+                    ${['ativa','pago','cancelada'].map(v => `<option value="${v}" ${p.status===v?'selected':''}>${v}</option>`).join('')}
+                </select>
+            </div>
+            <button class="btn btn-acao" onclick="salvarPrestacao(${p.id})">OK</button>
+            <button class="btn btn-perigo" onclick="deletar('/admin/prestacao/${p.id}', 'pre-${p.id}')">✕</button>
+            <span id="pre-flash-${p.id}" class="flash" style="display:none"></span>
+        </div>`).join('');
+}
+
+async function salvarPrestacao(id) {
+    const nivel  = parseInt(document.getElementById('pre-niv-' + id).value);
+    const status = document.getElementById('pre-st-' + id).value;
+    const resp = await api('/admin/prestacao/' + id, 'PATCH', { nivel, status });
+    if (resp.ok) flash('pre-flash-' + id, 'Salvo.', 'ok');
+    else flash('pre-flash-' + id, 'Erro', 'err');
+}
+
+async function deletar(url, elemId) {
+    if (!confirm('Deletar este item?')) return;
+    const resp = await api(url, 'DELETE');
+    if (resp.ok) {
+        const el = document.getElementById(elemId);
+        if (el) el.remove();
+    }
+}
+
+/* ──────────────────────────────────────────
+   XP — senha mestre via prompt uma vez por sessão
+─────────────────────────────────────────── */
+let _senhaMestre = null;
+function getSenhaMestre() {
+    if (!_senhaMestre) _senhaMestre = prompt('Senha mestre:') || '';
+    return _senhaMestre;
+}
+// Override concederXP para usar cache da senha
+(function() {
+    const _orig = window.concederXP;
+    window.concederXP = async function(jogador) {
+        const qtd = parseInt(document.getElementById('xp-qtd-' + jogador).value) || 0;
+        const desc = document.getElementById('xp-desc-' + jogador).value.trim() || 'ajuste manual';
+        if (qtd <= 0) { flash('xp-flash-' + jogador, 'Quantidade inválida', 'err'); return; }
+        const senha = getSenhaMestre();
+        const resp = await api('/xp/conceder', 'POST', { jogador, quantidade: qtd, descricao: desc, senha });
+        if (resp.ok) {
+            flash('xp-flash-' + jogador, '+' + qtd + ' XP concedido', 'ok');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            _senhaMestre = null; // limpa cache se senha errada
+            const d = await resp.json();
+            flash('xp-flash-' + jogador, d.erro || 'Erro', 'err');
+        }
+    };
+})();
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ──────────────────────────────────────────
+   INIT
+─────────────────────────────────────────── */
+carregarCanon();
+carregarMundo();
+</script>
+</body>
+</html>

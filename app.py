@@ -80,6 +80,15 @@ def login_required(f):
     return decorated
 
 
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('admin'):
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated
+
+
 def _get_pin(jogador: str) -> str | None:
     """Retorna o PIN do jogador ou None se ainda não cadastrado."""
     with _db() as con:
@@ -170,6 +179,159 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+
+# ── ADMIN ─────────────────────────────────────────────────────────────────────
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    erro = None
+    if request.method == 'POST':
+        senha = request.form.get('senha', '').strip()
+        senha_correta = os.environ.get('SENHA_MESTRE', '')
+        if senha_correta and hmac.compare_digest(senha, senha_correta):
+            session['admin'] = True
+            return redirect(url_for('admin_panel'))
+        erro = 'Senha incorreta.'
+    return render_template('admin_login.html', erro=erro)
+
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('admin', None)
+    return redirect(url_for('admin_login'))
+
+
+@app.route('/admin')
+@admin_required
+def admin_panel():
+    with _db() as con:
+        xp_rows = con.execute(
+            'SELECT jogador, disponivel, total_ganho FROM xp WHERE jogador IN (?,?)',
+            ('Lior', 'Fryderyk')
+        ).fetchall()
+        rec_rows = con.execute(
+            'SELECT jogador, willpower, health, humanity, COALESCE(hunger,0) FROM recursos WHERE jogador IN (?,?)',
+            ('Lior', 'Fryderyk')
+        ).fetchall()
+
+    xp = {r[0]: {'disponivel': r[1], 'total_ganho': r[2]} for r in xp_rows}
+    for j in ('Lior', 'Fryderyk'):
+        xp.setdefault(j, {'disponivel': 0, 'total_ganho': 0})
+
+    rec = {r[0]: {'willpower': r[1], 'health': r[2], 'humanity': r[3], 'hunger': r[4]} for r in rec_rows}
+    for j in ('Lior', 'Fryderyk'):
+        rec.setdefault(j, {'willpower': 5, 'health': 3, 'humanity': 7, 'hunger': 0})
+
+    return render_template('admin.html', xp=xp, rec=rec)
+
+
+@app.route('/admin/canon', methods=['PUT'])
+@admin_required
+def admin_set_canon():
+    dados = request.get_json(silent=True) or {}
+    conteudo = dados.get('conteudo', '').strip()
+    if not conteudo:
+        return jsonify({'erro': 'Conteúdo vazio'}), 400
+    with _canon_lock:
+        with _db() as con:
+            con.execute('UPDATE canon SET conteudo = ? WHERE id = 1', (conteudo,))
+            con.commit()
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/admin/recursos', methods=['POST'])
+@admin_required
+def admin_update_recursos():
+    dados = request.get_json(silent=True) or {}
+    jogador = dados.get('jogador', '').strip()
+    if jogador not in ('Lior', 'Fryderyk'):
+        return jsonify({'erro': 'Jogador inválido'}), 400
+    wp  = max(0, min(10, int(dados.get('willpower', 5))))
+    hp  = max(0, min(10, int(dados.get('health', 3))))
+    hum = max(0, min(10, int(dados.get('humanity', 7))))
+    hun = max(0, min(5,  int(dados.get('hunger', 0))))
+    with _db() as con:
+        con.execute('''INSERT INTO recursos (jogador, willpower, health, humanity, hunger)
+                       VALUES (?, ?, ?, ?, ?)
+                       ON CONFLICT(jogador) DO UPDATE SET
+                       willpower=excluded.willpower, health=excluded.health,
+                       humanity=excluded.humanity, hunger=excluded.hunger,
+                       atualizado_em=datetime('now','localtime')''',
+                    (jogador, wp, hp, hum, hun))
+        con.commit()
+    broadcast({'tipo': 'mundo_atualizado'})
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/admin/relogios/<int:rid>', methods=['PATCH', 'DELETE'])
+@admin_required
+def admin_relogio(rid):
+    if request.method == 'DELETE':
+        with _db() as con:
+            con.execute('DELETE FROM relogios WHERE id = ?', (rid,))
+            con.commit()
+        broadcast({'tipo': 'mundo_atualizado'})
+        return jsonify({'status': 'ok'})
+    dados = request.get_json(silent=True) or {}
+    atual = dados.get('atual')
+    maximo = dados.get('maximo')
+    if atual is None and maximo is None:
+        return jsonify({'erro': 'Nada para atualizar'}), 400
+    with _db() as con:
+        if atual is not None:
+            con.execute("UPDATE relogios SET atual=?, atualizado_em=datetime('now','localtime') WHERE id=?",
+                        (max(0, int(atual)), rid))
+        if maximo is not None:
+            con.execute("UPDATE relogios SET maximo=?, atualizado_em=datetime('now','localtime') WHERE id=?",
+                        (max(1, int(maximo)), rid))
+        con.commit()
+    broadcast({'tipo': 'mundo_atualizado'})
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/admin/sementes/<int:sid>', methods=['PATCH', 'DELETE'])
+@admin_required
+def admin_semente(sid):
+    if request.method == 'DELETE':
+        with _db() as con:
+            con.execute('DELETE FROM sementes WHERE id = ?', (sid,))
+            con.commit()
+        broadcast({'tipo': 'mundo_atualizado'})
+        return jsonify({'status': 'ok'})
+    dados = request.get_json(silent=True) or {}
+    status = dados.get('status', '').strip()
+    descricao = dados.get('descricao', '').strip()
+    with _db() as con:
+        if status:
+            con.execute('UPDATE sementes SET status=? WHERE id=?', (status, sid))
+        if descricao:
+            con.execute('UPDATE sementes SET descricao=? WHERE id=?', (descricao, sid))
+        con.commit()
+    broadcast({'tipo': 'mundo_atualizado'})
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/admin/prestacao/<int:pid>', methods=['PATCH', 'DELETE'])
+@admin_required
+def admin_prestacao(pid):
+    if request.method == 'DELETE':
+        with _db() as con:
+            con.execute('DELETE FROM prestacao WHERE id = ?', (pid,))
+            con.commit()
+        broadcast({'tipo': 'mundo_atualizado'})
+        return jsonify({'status': 'ok'})
+    dados = request.get_json(silent=True) or {}
+    nivel = dados.get('nivel')
+    status = dados.get('status', '').strip()
+    with _db() as con:
+        if nivel is not None:
+            con.execute('UPDATE prestacao SET nivel=? WHERE id=?', (int(nivel), pid))
+        if status:
+            con.execute('UPDATE prestacao SET status=? WHERE id=?', (status, pid))
+        con.commit()
+    broadcast({'tipo': 'mundo_atualizado'})
+    return jsonify({'status': 'ok'})
 
 
 # --- Presença online (heartbeat em memória) ---
