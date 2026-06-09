@@ -259,7 +259,7 @@ Fryderyk sabe que é o alvo. Lior descobre que sempre foi o instrumento. Protege
 IX. CONVENÇÕES DE REGRAS (ESTABELECIDAS NA MESA)
 
 Termos de jogo em inglês (Attributes, Skills, Disciplines) a pedido do jogador.
-O Narrador não rola dados — define reservas e dificuldades conforme o Core Rulebook de V5 e audita; os jogadores rolam e informam o resultado. A intensidade escala com a consequência.
+Para ações dos personagens jogadores, os jogadores rolam e informam o resultado. Para testes resistidos onde um NPC se opõe ativamente, o Narrador usa a tag [ROLAR: NPC | dados_normais | dados_fome | Descrição vs Jogador] — o sistema executa a rolagem real com RNG do servidor e compara automaticamente os sucessos. A intensidade escala com a consequência.
 Os PMDs defendem a própria pele e são fiéis às próprias convicções e desejos.
 Alimentação abstrata: rotina não pede cena; reserva do Tipo de Predador, sucesso → Fome 1; com Rebanho, sem rolagem. Alimentar sem matar baixa a Fome só até 1; chegar a 0 exige drenar até a morte.
 Custos de Disciplina: Awe (Presence) é ativação livre, sem Rouse. Cloak of Shadows, Silence of Death e Ghost in the Machine são livres. Unseen Passage pede Rouse.

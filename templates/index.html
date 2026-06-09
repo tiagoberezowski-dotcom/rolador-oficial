@@ -1114,6 +1114,29 @@
         </div>
 
 <!-- CHAT DO RPG -->
+        <!-- Modal Novo Arco -->
+        <div class="modal-overlay" id="modal-novo-arco">
+            <div class="modal-box" style="max-width:420px; gap:16px;">
+                <div class="modal-titulo" style="letter-spacing:4px; font-size:0.95rem; color:#c05050;">NOVO ARCO</div>
+                <p style="font-family:'Crimson Text',serif; color:#888; font-size:0.95rem; font-style:italic; text-align:center; margin:0; line-height:1.6;">
+                    Toda a história será apagada permanentemente.<br>
+                    Fichas e XP são preservados.<br>
+                    Esta ação não pode ser desfeita.
+                </p>
+                <input id="novo-arco-senha" type="password" placeholder="Senha mestre"
+                    style="background:#000; border:1px solid #c05050; color:#e0e0e0;
+                           font-family:'Crimson Text',serif; font-size:1rem; padding:12px 14px;
+                           border-radius:5px; width:100%; box-sizing:border-box; outline:none;"
+                    onfocus="this.style.borderColor='#e07070'"
+                    onblur="this.style.borderColor='#c05050'"
+                    onkeydown="if(event.key==='Enter') confirmarNovoArco(); if(event.key==='Escape') fecharModalNovoArco();">
+                <div class="modal-btns">
+                    <button class="btn" style="background:#c05050; color:#fff; border-color:#c05050;" onclick="confirmarNovoArco()">APAGAR E RECOMEÇAR</button>
+                    <button class="btn btn-secundario" onclick="fecharModalNovoArco()">CANCELAR</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal Encerrar Sessão -->
         <!-- Modal Input Genérico -->
         <div class="modal-overlay" id="modal-input-generico">
@@ -1229,6 +1252,7 @@
             <div class="hist-header">
                 <h2>MESA VIRTUAL (CHAT)</h2>
                 <div style="display:flex; gap:8px;">
+                    <button class="btn btn-secundario" style="flex:0; padding:6px 14px; font-size:0.8rem; color:#c05050; border-color:#c05050;" onclick="abrirModalNovoArco()" title="Apaga toda a história e inicia um novo arco">NOVO ARCO</button>
                     <button class="btn btn-secundario" style="flex:0; padding:6px 14px; font-size:0.8rem;" onclick="abrirModalSessao()">ENCERRAR SESSÃO</button>
                 </div>
             </div>
@@ -2141,6 +2165,67 @@
                 }
             }
             return d;
+        }
+
+        /* ---------- ROLAGEM DA IA (NPCs / Testes Resistidos) ---------- */
+        function renderizarRolagemIA(r) {
+            const card = document.createElement('div');
+            card.style.cssText = 'margin:10px 0;padding:14px 16px;border-radius:8px;background:#1a1a1a;border:1px solid #3a3a3a;';
+
+            // Cabeçalho
+            const header = document.createElement('div');
+            header.style.cssText = 'font-family:Cinzel,serif;font-size:0.8rem;letter-spacing:1px;color:#bbb;margin-bottom:8px;';
+            header.textContent = '🎲 ' + r.npc.toUpperCase() + ' — ' + r.acao;
+            card.appendChild(header);
+
+            // Área de dados
+            const areaDados = document.createElement('div');
+            areaDados.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;';
+            (r.dados_normais || []).forEach(v => {
+                const d = document.createElement('div');
+                d.className = 'dado dado-normal';
+                if (v === 10) d.classList.add('is-crit');
+                else if (v >= 6) d.classList.add('is-sucesso');
+                d.innerText = obterIconeDado(v, false);
+                areaDados.appendChild(d);
+            });
+            (r.dados_fome || []).forEach(v => {
+                const d = document.createElement('div');
+                d.className = 'dado dado-fome';
+                if (v === 10) d.classList.add('is-crit');
+                else if (v >= 6) d.classList.add('is-sucesso');
+                else if (v === 1) d.classList.add('is-bestial');
+                d.innerText = obterIconeDado(v, true);
+                areaDados.appendChild(d);
+            });
+            card.appendChild(areaDados);
+
+            // Resultado
+            const res = r.resultado || {};
+            const moodColors = { crit:'#c9a96e', sucesso:'#a08040', messy:'#b3001b', bestial:'#ff3030', falha:'#666' };
+            const cor = moodColors[res.tipo] || '#888';
+            const resDiv = document.createElement('div');
+            resDiv.style.cssText = 'font-family:Cinzel,serif;font-size:0.85rem;color:' + cor + ';margin-bottom:6px;';
+            resDiv.textContent = (res.label || '') + ' — ' + (res.sucessos || 0) + ' sucesso' + (res.sucessos === 1 ? '' : 's');
+            card.appendChild(resDiv);
+
+            // Banner de vencedor (testes resistidos)
+            if (r.vencedor) {
+                const banner = document.createElement('div');
+                const jogadorVenceu = r.vencedor === r.oponente;
+                const empate = r.vencedor === 'empate';
+                banner.style.cssText = 'margin-top:8px;padding:6px 10px;border-radius:4px;font-family:Cinzel,serif;font-size:0.8rem;letter-spacing:2px;text-align:center;font-weight:bold;background:' +
+                    (empate ? '#222' : jogadorVenceu ? '#1a1500' : '#1a0000') + ';color:' +
+                    (empate ? '#888' : jogadorVenceu ? '#c9a96e' : '#e05050') + ';border:1px solid ' +
+                    (empate ? '#444' : jogadorVenceu ? '#c9a96e' : '#b3001b') + ';';
+                banner.textContent = empate
+                    ? 'EMPATE — favorece o defensor'
+                    : (jogadorVenceu ? r.vencedor.toUpperCase() + ' VENCE' : r.vencedor.toUpperCase() + ' VENCE');
+                card.appendChild(banner);
+            }
+
+            chatBox.appendChild(card);
+            chatBox.scrollTop = chatBox.scrollHeight;
         }
 
         /* ---------- REROLL (FORÇA DE VONTADE) ---------- */
@@ -3543,6 +3628,18 @@
                         setFome(ev.valores[jogadorAtual2]);
                     }
                     break;
+
+                case 'rolagem_ia':
+                    for (const r of (ev.rolagens || [])) renderizarRolagemIA(r);
+                    break;
+
+                case 'historico_comprimido':
+                    // Exibe aviso discreto no chat — o histórico antigo foi comprimido em memória
+                    const aviso = document.createElement('div');
+                    aviso.style.cssText = 'text-align:center;color:#555;font-size:0.72rem;font-family:Cinzel,serif;padding:6px 0;letter-spacing:0.05em;';
+                    aviso.textContent = '— histórico comprimido —';
+                    chatBox.appendChild(aviso);
+                    break;
             }
         }
 
@@ -4240,6 +4337,37 @@
         pingPresenca();
         setInterval(() => pingPresenca(_estaTyping), 8000);
 
+        /* ---------- NOVO ARCO ---------- */
+        function abrirModalNovoArco() {
+            document.getElementById('novo-arco-senha').value = '';
+            document.getElementById('modal-novo-arco').classList.add('ativo');
+            setTimeout(() => document.getElementById('novo-arco-senha').focus(), 100);
+        }
+
+        function fecharModalNovoArco() {
+            document.getElementById('modal-novo-arco').classList.remove('ativo');
+        }
+
+        async function confirmarNovoArco() {
+            const senha = document.getElementById('novo-arco-senha').value.trim();
+            if (!senha) return;
+            try {
+                const resp = await fetch('/reset_cronica', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ senha })
+                });
+                if (resp.ok) {
+                    fecharModalNovoArco();
+                } else {
+                    const data = await resp.json();
+                    alert(data.erro || 'Senha incorreta.');
+                }
+            } catch (e) {
+                alert('Erro de conexão.');
+            }
+        }
+
         /* ---------- ENCERRAR SESSÃO ---------- */
         async function abrirModalSessao() {
             const ok = confirm(
@@ -4284,17 +4412,14 @@
             btn.textContent = 'SALVANDO...';
 
             try {
-                const resp = await fetch('/canon', {
+                const resp = await fetch('/salvar_sessao', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ conteudo })
+                    body: JSON.stringify({ resumo: conteudo })
                 });
                 const data = await resp.json();
                 if (data.status === 'ok') {
-                    btn.textContent = 'SALVO! LIMPANDO CHAT...';
-                    // Limpa as mensagens do banco — o cânone já tem tudo.
-                    await fetch('/limpar_chat', { method: 'POST' });
-                    btn.textContent = 'SESSÃO ENCERRADA';
+                    btn.textContent = `SESSÃO ${data.numero_sessao} ARQUIVADA`;
                     setTimeout(() => {
                         fecharModalSessao();
                         carregarChat(true);
