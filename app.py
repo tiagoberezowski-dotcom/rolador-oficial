@@ -11,6 +11,7 @@ import time as _time
 import threading
 import uuid
 import wave
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, Response, stream_with_context
@@ -877,6 +878,13 @@ _chat_lock = threading.RLock()
 mensagens_chat = []
 balde_acoes = []
 
+# --- Preparador de Cena (segundo modelo de IA) ---
+# Roda em background enquanto aguarda o segundo jogador.
+# Latência adicionada: zero no cenário padrão de dois jogadores.
+_briefing_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix='briefing')
+_briefing_future = None    # Future em andamento
+_briefing_lock = threading.Lock()
+
 # --- Compressão progressiva de histórico ---
 # Quando mensagens_chat atinge MAX_HISTORICO, as mensagens mais antigas são
 # resumidas pela IA e armazenadas aqui. O contexto enviado à IA inclui esses
@@ -923,6 +931,18 @@ def get_client():
     if not chave:
         raise ValueError("DEEPSEEK_API_KEY não configurada nas variáveis de ambiente.")
     return OpenAI(api_key=chave, base_url="https://api.deepseek.com")
+
+
+def _get_briefing_client():
+    """Retorna cliente OpenAI-compatible para o pré-processador de cena.
+    Usa BRIEFING_API_KEY + BRIEFING_BASE_URL + BRIEFING_MODEL.
+    Retorna None se BRIEFING_API_KEY não estiver definida — desabilita silenciosamente."""
+    chave = os.environ.get('BRIEFING_API_KEY', '')
+    if not chave:
+        return None, None
+    base_url = os.environ.get('BRIEFING_BASE_URL', 'https://api.deepseek.com')
+    modelo = os.environ.get('BRIEFING_MODEL', 'deepseek-chat')
+    return OpenAI(api_key=chave, base_url=base_url), modelo
 
 
 def _estado_personagens():
@@ -984,7 +1004,108 @@ def _estado_mundo():
     return '\n\n'.join(blocos)
 
 
-def gerar_resposta_ia(acoes, stream=False):
+# ---------------------------------------------------------------------------
+# Preparador de Cena — pré-processador de ações para o segundo modelo de IA
+# ---------------------------------------------------------------------------
+
+def _preparar_briefing_cena(acoes, ultimas_msgs, estado_pers, estado_mundo_raw):
+    """Chama o segundo modelo com um prompt compacto e retorna um briefing estruturado.
+    Retorna None em qualquer falha (cliente ausente, timeout, erro de API)."""
+    cliente, modelo = _get_briefing_client()
+    if cliente is None:
+        return None
+
+    # Monta o texto das ações
+    if len(acoes) == 1:
+        acoes_txt = f"{acoes[0]['autor']}: {acoes[0]['texto']}"
+    else:
+        acoes_txt = '\n'.join(f"{a['autor']}: {a['texto']}" for a in acoes)
+
+    # Últimas 4 mensagens como contexto imediato de cena
+    ultimas_txt = '\n'.join(
+        f"[{m['autor']}]: {m['texto'][:200]}" for m in ultimas_msgs[-4:]
+    ) or '(início de sessão)'
+
+    # Apenas os primeiros 3 itens do mundo para não inflar o prompt
+    mundo_linhas = [l for l in estado_mundo_raw.splitlines() if l.strip()][:8]
+    mundo_txt = '\n'.join(mundo_linhas) or '(nenhum estado ativo)'
+
+    prompt_sistema = (
+        "Você é um assistente de regras para Vampire: The Masquerade 5ª Edição. "
+        "Analise a ação dos jogadores e gere um briefing estruturado em até 120 palavras para o Narrador IA. "
+        "Seja direto e objetivo. Não narre, não interprete criativamente — apenas classifique e destaque."
+    )
+
+    prompt_usuario = f"""AÇÃO(ÕES) DO TURNO:
+{acoes_txt}
+
+ESTADO DOS PERSONAGENS:
+{estado_pers or '(não disponível)'}
+
+ESTADO DO MUNDO (relevante):
+{mundo_txt}
+
+ÚLTIMAS 4 MENSAGENS DA CENA:
+{ultimas_txt}
+
+---
+Responda EXATAMENTE neste formato (omita ALERTA se não houver):
+
+TIPO: [social_ativo | social_resistido | combate | furtividade | investigação | disciplina | narrativo]
+MECÂNICA: [pool sugerido; se resistido, indique a oposição; se narrativo puro, diga isso]
+ALERTA: [se a ação pressupõe resultado sem rolagem, ex: "convenço X" → lembrar o Narrador de pedir dados primeiro]
+CONTEXTO: [1-3 itens do estado do mundo diretamente relevantes para esta ação]"""
+
+    try:
+        resp = cliente.chat.completions.create(
+            model=modelo,
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": prompt_usuario},
+            ],
+            max_tokens=220,
+            temperature=0.1,
+            timeout=8,
+        )
+        briefing = resp.choices[0].message.content.strip()
+        app.logger.info("Briefing de cena pronto (%d chars): %s", len(briefing), briefing[:80])
+        return briefing
+    except Exception as exc:
+        app.logger.warning("Preparador de cena falhou (%s) — continuando sem briefing", exc)
+        return None
+
+
+def _iniciar_briefing_background(acoes_snapshot):
+    """Dispara o pré-processador em background durante a espera pelo segundo jogador."""
+    global _briefing_future
+    with _briefing_lock:
+        # Captura estado atual antes de soltar o lock do chat
+        ultimas = list(mensagens_chat[-4:])
+        estado_pers = _estado_personagens()
+        estado_mundo_raw = _estado_mundo()
+        _briefing_future = _briefing_executor.submit(
+            _preparar_briefing_cena,
+            acoes_snapshot, ultimas, estado_pers, estado_mundo_raw
+        )
+        app.logger.info("Preparador de cena iniciado em background")
+
+
+def _obter_briefing(timeout=3.0):
+    """Recupera o resultado do Future do pré-processador. Retorna None se não pronto ou falhou."""
+    global _briefing_future
+    with _briefing_lock:
+        fut = _briefing_future
+        _briefing_future = None
+    if fut is None:
+        return None
+    try:
+        return fut.result(timeout=timeout)
+    except Exception as exc:
+        app.logger.warning("Briefing não obtido a tempo (%s)", exc)
+        return None
+
+
+def gerar_resposta_ia(acoes, stream=False, briefing=None):
     """
     Liga para a API da DeepSeek e pede para ela narrar o turno.
     """
@@ -1520,6 +1641,17 @@ Cidades-exemplo a oferecer (não use como lista mecânica — integre na prosa):
         else:
             mensagens_api.append({"role": "user", "content": f"{msg['autor']} diz/faz: {msg['texto']}"})
 
+    # Briefing do Preparador de Cena (segundo modelo) — injetado antes da ação para focar a atenção.
+    if briefing:
+        mensagens_api.append({
+            "role": "user",
+            "content": f"[ANÁLISE PRÉVIA DA CENA — sistema automático]\n{briefing}"
+        })
+        mensagens_api.append({
+            "role": "assistant",
+            "content": "Análise recebida. Incorporo esses elementos na narração."
+        })
+
     # Empacota as ações — pode ser 1 ou 2 jogadores
     if len(acoes) == 1:
         mensagens_api.append({
@@ -1637,6 +1769,14 @@ def stream_chat():
             turno_atual['respondidos'] == set(jogadores_online)
         )
 
+    # Inicia o Preparador de Cena em background quando o primeiro jogador envia
+    # e o app ainda aguarda o segundo. Custo de latência: zero no cenário padrão.
+    if not deve_processar and not forcar:
+        with _chat_lock:
+            acoes_para_briefing = list(balde_acoes)
+        if len(acoes_para_briefing) == 1:
+            _iniciar_briefing_background(acoes_para_briefing)
+
     def generate():
         full_response = ""
         emitido_len = 0  # quanto do texto visível já foi enviado ao vivo
@@ -1666,7 +1806,11 @@ def stream_chat():
             # Avisa o outro jogador que o Mestre começou a responder.
             broadcast({"tipo": "mestre_inicio"})
 
-            stream_obj = gerar_resposta_ia(acoes_snapshot, stream=True)
+            # Recupera briefing do Preparador de Cena (pode já estar pronto em background).
+            # Se não chegou a tempo ou feature desabilitada, retorna None sem bloquear.
+            briefing_cena = _obter_briefing(timeout=3.0)
+
+            stream_obj = gerar_resposta_ia(acoes_snapshot, stream=True, briefing=briefing_cena)
             _pensando_sinalizado = False
             for chunk in stream_obj:
                 d = chunk.choices[0].delta
