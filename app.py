@@ -11,11 +11,15 @@ import time as _time
 import threading
 import uuid
 import wave
+import base64
+import mimetypes
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, Response, stream_with_context
 from openai import OpenAI
+import boto3
+from botocore.client import Config
 
 # Carrega variáveis do .env em desenvolvimento
 try:
@@ -377,17 +381,58 @@ MAX_FOME = 5
 MAX_REROLL = 3
 MAX_HISTORICO = 200
 
-# Quantas mensagens recentes do chat enviar à IA por chamada.
-# A memória de longo prazo vive no cânone (+ resumo de sessão); o chat é só o curto prazo.
-MAX_CONTEXTO_CHAT = 24
+# Teto duro de mensagens do chat enviadas à IA por chamada. Em operação normal
+# o histórico fica abaixo disso: a compressão trunca para MANTER_RECENTES ao
+# atingir MAX_HISTORICO, e entre compressões o histórico só cresce por append,
+# o que mantém o prefixo estável e o cache de contexto da DeepSeek quente.
+# O teto protege apenas contra falha repetida da compressão.
+MAX_CONTEXTO_CHAT = 100
 
 # Timeout (segundos) das chamadas à API do Mestre.
 API_TIMEOUT = 120
 
 historico = []
 
+# --- R2 Storage ---
+R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID', '')
+R2_ACCESS_KEY  = os.environ.get('R2_ACCESS_KEY',  '')
+R2_SECRET_KEY  = os.environ.get('R2_SECRET_KEY',  '')
+R2_BUCKET      = os.environ.get('R2_BUCKET',      '')
+R2_PUBLIC_URL  = os.environ.get('R2_PUBLIC_URL',  '').rstrip('/')
+
+def _r2():
+    return boto3.client(
+        's3',
+        endpoint_url=f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com',
+        aws_access_key_id=R2_ACCESS_KEY,
+        aws_secret_access_key=R2_SECRET_KEY,
+        config=Config(signature_version='s3v4'),
+        region_name='auto',
+    )
+
+def upload_imagem_r2(data_url: str, pasta: str, nome: str) -> str:
+    """Recebe data URL base64, faz upload para R2 e retorna a URL pública."""
+    if not data_url or not data_url.startswith('data:') or not R2_BUCKET:
+        return data_url
+    header, encoded = data_url.split(',', 1)
+    mime = header.split(';')[0].split(':')[1]
+    ext = mimetypes.guess_extension(mime) or '.jpg'
+    if ext == '.jpe':
+        ext = '.jpg'
+    dados = base64.b64decode(encoded)
+    chave = f'{pasta}/{nome}{ext}'
+    _r2().put_object(
+        Bucket=R2_BUCKET,
+        Key=chave,
+        Body=dados,
+        ContentType=mime,
+    )
+    return f'{R2_PUBLIC_URL}/{chave}'
+
 # --- Banco de Dados ---
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'banco.db')
+# Em produção, defina DB_PATH=/var/data/banco.db no systemd; sem a variável,
+# usa o banco.db local (desenvolvimento).
+DB_PATH = os.environ.get('DB_PATH') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'banco.db')
 BACKUP_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backup_mensagens.json')
 
 _canon_lock = threading.Lock()
@@ -692,6 +737,27 @@ def init_db():
             con.execute('ALTER TABLE fichas ADD COLUMN capa TEXT DEFAULT ""')
         except sqlite3.OperationalError:
             pass
+        # Resumos de compressão intermediária — persistidos para sobreviver a reinício
+        con.execute('''CREATE TABLE IF NOT EXISTS resumos_intermediarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resumo TEXT NOT NULL,
+            criado_em TEXT DEFAULT (datetime('now','localtime'))
+        )''')
+        # Propostas de atualização do cânone geradas ao fim de cada sessão
+        con.execute('''CREATE TABLE IF NOT EXISTS canon_propostas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_sessao INTEGER,
+            proposta TEXT NOT NULL,
+            status TEXT DEFAULT 'pendente',
+            criado_em TEXT DEFAULT (datetime('now','localtime'))
+        )''')
+        # Diário do Mestre — raciocínio interno do modelo, visível só no admin
+        con.execute('''CREATE TABLE IF NOT EXISTS mestre_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resposta_inicio TEXT,
+            raciocinio TEXT NOT NULL,
+            criado_em TEXT DEFAULT (datetime('now','localtime'))
+        )''')
         con.commit()
     # WAL mode deve ser ativado fora de transação
     con2 = sqlite3.connect(DB_PATH, timeout=10)
@@ -827,6 +893,10 @@ def _comprimir_historico_bg():
 
         with _chat_lock:
             _mid_session_summaries.append(resumo)
+            # Persiste o resumo — sobrevive a reinício do servidor no meio da sessão
+            with _db() as con:
+                con.execute('INSERT INTO resumos_intermediarios (resumo) VALUES (?)', (resumo,))
+                con.commit()
             # Mantém apenas MANTER_RECENTES mensagens brutas
             del mensagens_chat[:-MANTER_RECENTES]
             _backup_mensagens_unsafe(list(mensagens_chat))
@@ -838,6 +908,25 @@ def _comprimir_historico_bg():
         app.logger.error('Erro na compressão de histórico: %s', e)
     finally:
         _compressao_em_andamento.clear()
+
+
+def _restaurar_resumos_intermediarios():
+    """Recarrega resumos de compressão persistidos após reinício do servidor."""
+    with _db() as con:
+        rows = con.execute('SELECT resumo FROM resumos_intermediarios ORDER BY id').fetchall()
+    for r in rows:
+        _mid_session_summaries.append(r[0])
+    if rows:
+        app.logger.info('Restaurados %d resumos intermediários do banco', len(rows))
+
+
+def _limpar_resumos_intermediarios():
+    """Esvazia os resumos intermediários (memória e banco) — sessão arquivada ou descartada."""
+    global _mid_session_summaries
+    _mid_session_summaries = []
+    with _db() as con:
+        con.execute('DELETE FROM resumos_intermediarios')
+        con.commit()
 
 
 def _restaurar_balde():
@@ -954,7 +1043,9 @@ def _get_briefing_clientes():
     """Retorna lista de (cliente, modelo) para o pré-processador de cena com fallback.
     Prioridade: BRIEFING_API_KEY dedicada; senão usa as chaves Groq principais."""
     base_url = os.environ.get('BRIEFING_BASE_URL', 'https://api.groq.com/openai/v1')
-    modelo = os.environ.get('BRIEFING_MODEL', 'llama-3.1-8b-instant')
+    # 70B no free tier da Groq: classificação de mecânica V5 é exatamente onde
+    # modelo pequeno erra (pools, testes resistidos, custos de Rouse).
+    modelo = os.environ.get('BRIEFING_MODEL', 'llama-3.3-70b-versatile')
 
     # Chaves dedicadas ao briefing (BRIEFING_API_KEY, BRIEFING_API_KEY_2)
     chaves = []
@@ -979,12 +1070,16 @@ def _estado_personagens():
     with _db() as con:
         for j in jogadores:
             ficha_row = con.execute('SELECT dados FROM fichas WHERE jogador = ?', (j,)).fetchone()
-            recursos_row = con.execute('SELECT willpower, health, humanity FROM recursos WHERE jogador = ?', (j,)).fetchone()
+            recursos_row = con.execute(
+                'SELECT willpower, health, humanity, COALESCE(hunger, 0) FROM recursos WHERE jogador = ?', (j,)
+            ).fetchone()
             if not ficha_row:
                 continue
             dados = json.loads(ficha_row[0])
+            # Fonte única da Fome: recursos.hunger (a tag [FOME:] grava lá).
+            # O JSON da ficha pode estar defasado se o jogador estiver offline.
             estado[j] = {
-                "hunger": dados.get('fome', 0),
+                "hunger": recursos_row[3] if recursos_row else dados.get('fome', 0),
                 "blood_potency": dados.get('blood_potency', 2),
                 "willpower": recursos_row[0] if recursos_row else 5,
                 "humanity": recursos_row[2] if recursos_row else 7,
@@ -1029,6 +1124,78 @@ def _estado_mundo():
         blocos.append("[PRESTAÇÃO ATIVA]\n" + '\n'.join(linhas))
 
     return '\n\n'.join(blocos)
+
+
+# ---------------------------------------------------------------------------
+# Rolagens verificadas — o Mestre lê os dados reais do servidor, não a
+# transcrição do jogador. O watermark marca até onde ele já consumiu.
+# ---------------------------------------------------------------------------
+_rolagens_watermark = 0
+
+
+def _init_rolagens_watermark():
+    """No startup, ignora rolagens antigas — só as novas entram no contexto do Mestre."""
+    global _rolagens_watermark
+    with _db() as con:
+        row = con.execute('SELECT COALESCE(MAX(id), 0) FROM rolagens').fetchone()
+    _rolagens_watermark = row[0]
+
+
+def _marcar_rolagens_processadas():
+    """Avança o watermark até a última rolagem registrada — chamado ao fim de cada turno do Mestre."""
+    global _rolagens_watermark
+    with _db() as con:
+        row = con.execute('SELECT COALESCE(MAX(id), 0) FROM rolagens').fetchone()
+    _rolagens_watermark = max(_rolagens_watermark, row[0])
+
+
+def _bloco_rolagens_jogadores():
+    """Monta o bloco de rolagens dos jogadores desde o último turno, para o contexto da IA."""
+    with _db() as con:
+        rows = con.execute(
+            'SELECT jogador, acao, dados, resultado FROM rolagens WHERE id > ? ORDER BY id',
+            (_rolagens_watermark,)
+        ).fetchall()
+    if not rows:
+        return ''
+    linhas = []
+    for jogador, acao, dados_json, resultado_json in rows:
+        d = json.loads(dados_json) if dados_json else {}
+        normais = d.get('normais', [])
+        fome = d.get('fome', [])
+        res = json.loads(resultado_json) if resultado_json else None
+        desc = f'"{acao}"' if acao else '(sem descrição)'
+        if res:
+            linhas.append(
+                f"{jogador} — {desc} | normais {normais} + fome {fome} "
+                f"→ {res.get('sucessos', 0)} sucessos ({res.get('label', '')})"
+            )
+        elif 'rouse' in (acao or '').lower():
+            dado = normais[0] if normais else '?'
+            ok = isinstance(dado, int) and dado >= 6
+            linhas.append(f"{jogador} — Rouse Check: {dado} ({'sucesso' if ok else 'falha — Fome sobe 1'})")
+        else:
+            linhas.append(f"{jogador} — {desc} | normais {normais} + fome {fome}")
+    return (
+        "[ROLAGENS DOS JOGADORES — verificadas pelo RNG do servidor desde o último turno]\n"
+        + '\n'.join(linhas)
+        + "\nEstes números são a verdade mecânica desta cena. Se a ação declarada citar valores diferentes, confie nestes."
+    )
+
+
+def _formatar_rolagens_npc_para_ia(rolagens):
+    """Formata os resultados de [ROLAR:] para devolver à IA na fase de continuação."""
+    linhas = []
+    for r in rolagens:
+        res = r['resultado']
+        linha = (
+            f"{r['npc']} — {r['acao']} | normais {r['dados_normais']} + fome {r['dados_fome']} "
+            f"→ {res['sucessos']} sucessos ({res['label']})"
+        )
+        if r.get('oponente'):
+            linha += f" | oponente: {r['oponente']} | vencedor: {r.get('vencedor') or 'indefinido'}"
+        linhas.append(linha)
+    return '\n'.join(linhas)
 
 
 # ---------------------------------------------------------------------------
@@ -1139,9 +1306,13 @@ def _obter_briefing(timeout=3.0):
         return None
 
 
-def gerar_resposta_ia(acoes, stream=False, briefing=None):
+def gerar_resposta_ia(acoes, stream=False, briefing=None, continuacao=None):
     """
     Liga para a API da DeepSeek e pede para ela narrar o turno.
+
+    continuacao: dict {'parcial': texto_ja_narrado, 'rolagens': [...]} — segunda
+    fase do turno, quando a IA pediu rolagens de NPC via [ROLAR:] e o servidor
+    já executou os dados. A IA recebe os resultados e continua a narração.
     """
     # A personalidade do Mestre
     prompt_sistema = """# NARRADOR — *VAMPIRO: A MÁSCARA* (5ª EDIÇÃO)
@@ -1275,8 +1446,10 @@ Aplique as regras como tensão narrativa, jamais como planilha.
 - Para solicitar a rolagem do NPC, use: `[ROLAR: NomeNPC | dados_normais | dados_fome | Descrição vs Jogador]`
   - Exemplo: `[ROLAR: Xerife | 4 | 1 | Percepção vs Lior]`
   - O sistema executa os dados reais via RNG do servidor e determina o vencedor automaticamente.
-  - **Não invente resultados.** A tag é um pedido — o servidor rola; você narra o desfecho conforme o resultado exibido.
+  - **Não invente resultados.** Narre até o instante da rolagem, emita a(s) tag(s) no FIM da resposta e pare. O servidor rola na hora e devolve os resultados imediatamente para você **continuar a narração no mesmo turno** — incorpore o desfecho sem repetir o que já narrou.
   - Use também para rolagens puras de NPC sem oponente: `[ROLAR: Guarda | 3 | 0 | Percepção]`
+
+**Rolagens verificadas dos jogadores:** as rolagens feitas no rolador do site chegam a você num bloco `[ROLAGENS DOS JOGADORES]` com os dados reais do RNG do servidor. Esses números são a verdade mecânica — se a mensagem do jogador citar valores diferentes, confie no bloco verificado. O jogador não precisa transcrever resultados: declare a reserva, espere a rolagem e narre a partir do bloco.
 
 **Vitória a um custo & Força de Vontade:** ofereça sucesso parcial com preço quando a falha seca for menos interessante. Força de Vontade re-rola até 3 dados **normais** (nunca os de Fome).
 
@@ -1575,6 +1748,18 @@ Regras:
 - Pode atualizar um ou ambos
 - A tag é processada automaticamente — a ficha do jogador é atualizada em tempo real
 
+### I.C. CONTROLE DE RECURSOS (Vontade, Vitalidade, Humanidade)
+
+Força de Vontade, Vitalidade (Health) e Humanidade também são controladas por você. Sempre que mudarem na ficção (gasto de Vontade para re-rolar, dano sofrido, Mancha consolidada, recuperação em downtime), use:
+
+`[RECURSO: Lior willpower=3, Fryderyk humanity=6]`
+
+Regras:
+- Chaves válidas: `willpower`, `health`, `humanity` (valores 0-10, sempre o valor absoluto novo)
+- Pode combinar vários pares na mesma tag, separados por vírgula
+- Use junto com a narração do custo — nunca mude recurso sem que a ficção justifique
+- A tag é processada automaticamente e invisível aos jogadores
+
 ---
 
 ### J. TAGS DE MUNDO PERSISTENTE — MEMÓRIA REAL DO NARRADOR
@@ -1656,7 +1841,17 @@ Cidades-exemplo a oferecer (não use como lista mecânica — integre na prosa):
         mensagens_api.append({"role": "user", "content": "[HISTÓRICO COMPRIMIDO DESTA SESSÃO]\n" + bloco})
         mensagens_api.append({"role": "assistant", "content": "Histórico intermediário registrado."})
 
-    # Estado dinâmico: personagens + mundo persistente (relógios, sementes, prestação).
+    # Histórico do chat ANTES do estado dinâmico. O histórico só cresce por
+    # append entre compressões, então mantê-lo cedo no prefixo maximiza o
+    # cache de contexto da DeepSeek (entrada cacheada custa ~1/10 e reduz a
+    # latência). O estado, que muda a cada turno, vem depois.
+    for msg in mensagens_chat[-MAX_CONTEXTO_CHAT:]:
+        if msg["autor"] == "Mestre (IA)":
+            mensagens_api.append({"role": "assistant", "content": msg['texto']})
+        else:
+            mensagens_api.append({"role": "user", "content": f"{msg['autor']} diz/faz: {msg['texto']}"})
+
+    # Estado dinâmico: personagens + mundo persistente + rolagens verificadas.
     partes_estado = []
     estado_pers = _estado_personagens()
     if estado_pers:
@@ -1664,16 +1859,12 @@ Cidades-exemplo a oferecer (não use como lista mecânica — integre na prosa):
     estado_mundo = _estado_mundo()
     if estado_mundo:
         partes_estado.append(estado_mundo)
+    rolagens_verificadas = _bloco_rolagens_jogadores()
+    if rolagens_verificadas:
+        partes_estado.append(rolagens_verificadas)
     if partes_estado:
         mensagens_api.append({"role": "user", "content": '\n\n'.join(partes_estado)})
         mensagens_api.append({"role": "assistant", "content": "Estado do mundo registrado."})
-
-    # Só as mensagens recentes — o passado distante já está condensado no cânone.
-    for msg in mensagens_chat[-MAX_CONTEXTO_CHAT:]:
-        if msg["autor"] == "Mestre (IA)":
-            mensagens_api.append({"role": "assistant", "content": msg['texto']})
-        else:
-            mensagens_api.append({"role": "user", "content": f"{msg['autor']} diz/faz: {msg['texto']}"})
 
     # Briefing do Preparador de Cena (segundo modelo) — injetado antes da ação para focar a atenção.
     if briefing:
@@ -1698,6 +1889,21 @@ Cidades-exemplo a oferecer (não use como lista mecânica — integre na prosa):
         mensagens_api.append({
             "role": "user",
             "content": f"Ações simultâneas:\n1) {acao_1}\n2) {acao_2}\n\nNarre o resultado dessas ações e avance a cena."
+        })
+
+    # Segunda fase: a IA pediu rolagens via [ROLAR:], o servidor executou e
+    # devolve os resultados para a narração continuar do ponto exato da pausa.
+    if continuacao:
+        mensagens_api.append({"role": "assistant", "content": continuacao['parcial']})
+        mensagens_api.append({
+            "role": "user",
+            "content": (
+                "[RESULTADOS DAS ROLAGENS — RNG do servidor]\n"
+                + _formatar_rolagens_npc_para_ia(continuacao['rolagens'])
+                + "\n\nContinue a narração exatamente de onde parou, incorporando estes resultados. "
+                  "Não repita o que já foi narrado, não reabra a cena, não cumprimente. "
+                  "Termine devolvendo a vez aos jogadores."
+            )
         })
 
     try:
@@ -1811,12 +2017,70 @@ def stream_chat():
             _iniciar_briefing_background(acoes_para_briefing)
 
     def generate():
-        full_response = ""
-        emitido_len = 0  # quanto do texto visível já foi enviado ao vivo
         salvou = False
-        # Rastreia o NPC ativo no stream para separar tokens por personagem.
-        npc_corrente = None
-        texto_acumulado_npc = ""
+        # Estado compartilhado entre as fases: NPC ativo no broadcast e sinal de "pensando".
+        npc_estado = {'corrente': None, 'buffer': '', 'pensando': False}
+        # Coletas brutas de cada fase — atualizadas chunk a chunk para que o
+        # tratamento de erro tenha acesso ao parcial.
+        fase1 = {'texto': '', 'raciocinio': ''}
+        fase2 = {'texto': '', 'raciocinio': ''}
+        texto1_limpo = None  # fase 1 com tags já processadas
+
+        def _rodar_fase(stream_obj, coleta):
+            """Consome um stream da IA: emite SSE ao remetente, faz broadcast ao
+            outro jogador e suprime tags de controle do texto visível."""
+            emitido_len = 0
+            for chunk in stream_obj:
+                d = chunk.choices[0].delta
+                # v4-pro é modelo de raciocínio: emite reasoning_content antes do texto.
+                # O raciocínio contém plot secrets — vai para o Diário do Mestre
+                # (admin), nunca para os jogadores.
+                raciocinio = getattr(d, 'reasoning_content', None)
+                if raciocinio:
+                    coleta['raciocinio'] += raciocinio
+                    if not npc_estado['pensando']:
+                        yield f"data: {json.dumps({'pensando': '...'})}\n\n"
+                        npc_estado['pensando'] = True
+                    continue
+
+                delta = d.content
+                if not delta:
+                    continue
+
+                coleta['texto'] += delta
+                full = coleta['texto']
+
+                # Calcula o trecho visível: corta a partir da primeira tag de controle
+                # (sempre no fim) e segura um '[' aberto, que pode ser uma tag ainda
+                # chegando — evita o flash das tags na tela.
+                m_ctrl = _CONTROL_RE.search(full)
+                limite = m_ctrl.start() if m_ctrl else len(full)
+                if m_ctrl is None:
+                    seg = full[:limite]
+                    ult_abre = seg.rfind('[')
+                    ult_fecha = seg.rfind(']')
+                    if ult_abre > ult_fecha:
+                        limite = ult_abre
+                if limite <= emitido_len:
+                    continue
+                novo = full[emitido_len:limite]
+                emitido_len = limite
+
+                # Yield para o remetente via HTTP (seu próprio stream).
+                yield f"data: {json.dumps({'token': novo})}\n\n"
+
+                # Broadcast para o outro jogador via SSE, separando falas de NPC.
+                npc_estado['buffer'] += novo
+                npc_match = re.search(r'\[NPC:\s*([^\]]+)\]\n?', npc_estado['buffer'])
+                if npc_match:
+                    nome_npc = npc_match.group(1).strip()
+                    npc_estado['buffer'] = npc_estado['buffer'].replace(npc_match.group(0), '')
+                    npc_estado['corrente'] = nome_npc
+                    broadcast({"tipo": "mestre_npc_inicio", "nome": nome_npc})
+                elif npc_estado['corrente']:
+                    broadcast({"tipo": "mestre_token_npc", "delta": novo, "nome": npc_estado['corrente']})
+                else:
+                    broadcast({"tipo": "mestre_token", "delta": novo})
 
         try:
             if not deve_processar:
@@ -1839,68 +2103,57 @@ def stream_chat():
             # Avisa o outro jogador que o Mestre começou a responder.
             broadcast({"tipo": "mestre_inicio"})
 
-            # Recupera briefing do Preparador de Cena (pode já estar pronto em background).
-            # Se não chegou a tempo ou feature desabilitada, retorna None sem bloquear.
-            briefing_cena = _obter_briefing(timeout=3.0)
+            # Preparador de Cena: se nenhum briefing foi iniciado durante a espera
+            # (jogo solo ou 'forçar'), inicia agora — o verificador de regras vale
+            # a pequena espera também fora do fluxo de dois jogadores.
+            with _briefing_lock:
+                briefing_pendente = _briefing_future is not None
+            if not briefing_pendente:
+                _iniciar_briefing_background(acoes_snapshot)
+            briefing_cena = _obter_briefing(timeout=4.0)
 
             stream_obj = gerar_resposta_ia(acoes_snapshot, stream=True, briefing=briefing_cena)
-            _pensando_sinalizado = False
-            for chunk in stream_obj:
-                d = chunk.choices[0].delta
-                # v4-pro é modelo de raciocínio: emite reasoning_content antes do texto.
-                # O raciocínio interno contém plot secrets — não é exibido aos jogadores.
-                # Apenas sinalizamos "está pensando" uma vez para ativar a animação.
-                raciocinio = getattr(d, 'reasoning_content', None)
-                if raciocinio:
-                    if not _pensando_sinalizado:
-                        yield f"data: {json.dumps({'pensando': '...'})}\n\n"
-                        _pensando_sinalizado = True
-                    continue
+            yield from _rodar_fase(stream_obj, fase1)
 
-                delta = d.content
-                if not delta:
-                    continue
+            # Processa tags de controle da fase 1.
+            t1, xp_concedidos = _processar_xp_tag(fase1['texto'])
+            t1, fome_atualizada = _processar_fome_tag(t1)
+            t1, recursos_atualizados = _processar_recurso_tag(t1)
+            t1, mundo_mudou = _processar_tags_mundo(t1)
+            texto1_limpo, rolagens_npc = _processar_rolar_tag(t1)
 
-                full_response += delta
+            full_response = texto1_limpo
 
-                # Calcula o trecho visível: corta a partir da primeira tag de controle
-                # (XP/RELOGIO/etc, sempre no fim) e segura um '[' aberto no fim, que pode
-                # ser uma tag de controle ainda chegando — evita o flash das tags na tela.
-                m_ctrl = _CONTROL_RE.search(full_response)
-                limite = m_ctrl.start() if m_ctrl else len(full_response)
-                if m_ctrl is None:
-                    seg = full_response[:limite]
-                    ult_abre = seg.rfind('[')
-                    ult_fecha = seg.rfind(']')
-                    if ult_abre > ult_fecha:
-                        limite = ult_abre
-                if limite <= emitido_len:
-                    continue
-                novo = full_response[emitido_len:limite]
-                emitido_len = limite
+            # Fase 2: a IA pediu rolagens de NPC via [ROLAR:]. O servidor já
+            # rolou; mostra os dados aos jogadores e devolve os resultados para
+            # a narração continuar no mesmo turno, em vez de só no próximo.
+            if rolagens_npc:
+                broadcast({"tipo": "rolagem_ia", "rolagens": rolagens_npc})
+                separador = "\n\n"
+                yield f"data: {json.dumps({'token': separador})}\n\n"
+                npc_estado['corrente'] = None
+                broadcast({"tipo": "mestre_token", "delta": separador})
 
-                # Yield para o remetente via HTTP (seu próprio stream).
-                yield f"data: {json.dumps({'token': novo})}\n\n"
+                stream2 = gerar_resposta_ia(
+                    acoes_snapshot, stream=True, briefing=briefing_cena,
+                    continuacao={'parcial': texto1_limpo, 'rolagens': rolagens_npc}
+                )
+                yield from _rodar_fase(stream2, fase2)
 
-                # Broadcast para o outro jogador via SSE.
-                # Detecta tag NPC no acumulado para separar falas.
-                texto_acumulado_npc += novo
-                npc_match = re.search(r'\[NPC:\s*([^\]]+)\]\n?', texto_acumulado_npc)
-                if npc_match:
-                    nome_npc = npc_match.group(1).strip()
-                    texto_acumulado_npc = texto_acumulado_npc.replace(npc_match.group(0), '')
-                    npc_corrente = nome_npc
-                    broadcast({"tipo": "mestre_npc_inicio", "nome": nome_npc})
-                elif npc_corrente:
-                    broadcast({"tipo": "mestre_token_npc", "delta": novo, "nome": npc_corrente})
-                else:
-                    broadcast({"tipo": "mestre_token", "delta": novo})
+                t2, xp2 = _processar_xp_tag(fase2['texto'])
+                t2, fome2 = _processar_fome_tag(t2)
+                t2, rec2 = _processar_recurso_tag(t2)
+                t2, mundo2 = _processar_tags_mundo(t2)
+                # Rolagens pedidas na continuação não geram terceira fase:
+                # ficam para o turno seguinte (comportamento antigo).
+                t2, rolagens_npc = _processar_rolar_tag(t2)
 
-            # Processa tags de controle (XP, Fome e mundo persistente) antes de salvar.
-            full_response, xp_concedidos = _processar_xp_tag(full_response)
-            full_response, fome_atualizada = _processar_fome_tag(full_response)
-            full_response, mundo_mudou = _processar_tags_mundo(full_response)
-            full_response, rolagens_npc = _processar_rolar_tag(full_response)
+                xp_concedidos.update(xp2)
+                fome_atualizada.update(fome2)
+                recursos_atualizados.update(rec2)
+                mundo_mudou = mundo_mudou or mundo2
+                if t2:
+                    full_response = texto1_limpo + separador + t2
 
             # Persiste e encerra o turno.
             with _chat_lock:
@@ -1911,6 +2164,8 @@ def stream_chat():
                     con.execute('DELETE FROM acoes_pendentes')
                     con.commit()
             salvou = True
+            _marcar_rolagens_processadas()
+            _salvar_diario_mestre(fase1['raciocinio'] + fase2['raciocinio'], full_response)
 
             with _turno_lock:
                 _resetar_turno()
@@ -1919,7 +2174,9 @@ def stream_chat():
                 broadcast({"tipo": "xp_atualizado", "concedidos": xp_concedidos})
             if fome_atualizada:
                 broadcast({"tipo": "fome_atualizada", "valores": fome_atualizada})
-            if mundo_mudou:
+            if recursos_atualizados:
+                broadcast({"tipo": "recursos_atualizados", "valores": recursos_atualizados})
+            if mundo_mudou or recursos_atualizados:
                 broadcast({"tipo": "mundo_atualizado"})
             if rolagens_npc:
                 broadcast({"tipo": "rolagem_ia", "rolagens": rolagens_npc})
@@ -1933,13 +2190,25 @@ def stream_chat():
 
         except Exception as e:
             app.logger.error("Erro em stream_chat: %s", e)
-            if full_response and not salvou:
+            # Reconstrói o parcial: fase 1 limpa (se concluiu) + bruto da fase interrompida.
+            if texto1_limpo is None:
+                partes = []
+                bruto = fase1['texto']
+            else:
+                partes = [texto1_limpo]
+                bruto = fase2['texto']
+            if bruto:
                 # Limpa tags de controle incompletas antes de salvar o parcial.
-                full_response, _ = _processar_xp_tag(full_response)
-                full_response, _ = _processar_fome_tag(full_response)
-                full_response, _ = _processar_tags_mundo(full_response)
-                full_response, _ = _processar_rolar_tag(full_response)
-                parcial = full_response + "\n\n*(…transmissão interrompida)*"
+                bruto, _ = _processar_xp_tag(bruto)
+                bruto, _ = _processar_fome_tag(bruto)
+                bruto, _ = _processar_recurso_tag(bruto)
+                bruto, _ = _processar_tags_mundo(bruto)
+                bruto, _ = _processar_rolar_tag(bruto)
+                if bruto:
+                    partes.append(bruto)
+            parcial_total = "\n\n".join(p for p in partes if p)
+            if parcial_total and not salvou:
+                parcial = parcial_total + "\n\n*(…transmissão interrompida)*"
                 with _chat_lock:
                     hora = salvar_mensagem_db("Mestre (IA)", parcial)
                     mensagens_chat.append({"autor": "Mestre (IA)", "texto": parcial, "hora": hora})
@@ -1949,6 +2218,7 @@ def stream_chat():
                         con.commit()
                 with _turno_lock:
                     _resetar_turno()
+                _marcar_rolagens_processadas()
             broadcast({"tipo": "mestre_done"})
             yield f"data: {json.dumps({'erro': str(e)})}\n\n"
 
@@ -2365,6 +2635,9 @@ def save_npc_avatar():
     avatar = dados.get('avatar', '').strip()
     if not nome or not avatar:
         return jsonify({'erro': 'Dados inválidos'}), 400
+    if avatar.startswith('data:'):
+        slug = re.sub(r'[^a-z0-9]', '_', nome.lower())
+        avatar = upload_imagem_r2(avatar, 'npcs', slug)
     with _db() as con:
         con.execute(
             '''INSERT INTO npc_avatares (nome, avatar) VALUES (?, ?)
@@ -2468,15 +2741,20 @@ def iniciar_sessao():
                 broadcast({"tipo": "mestre_token", "delta": delta})
             full_response, xp_c = _processar_xp_tag(full_response)
             full_response, fome_a = _processar_fome_tag(full_response)
+            full_response, rec_a = _processar_recurso_tag(full_response)
             full_response, _ = _processar_tags_mundo(full_response)
             full_response, rol_npc = _processar_rolar_tag(full_response)
             with _chat_lock:
                 hora = salvar_mensagem_db("Mestre (IA)", full_response)
                 mensagens_chat.append({"autor": "Mestre (IA)", "texto": full_response, "hora": hora})
+            _marcar_rolagens_processadas()
             if xp_c:
                 broadcast({"tipo": "xp_atualizado", "concedidos": xp_c})
             if fome_a:
                 broadcast({"tipo": "fome_atualizada", "valores": fome_a})
+            if rec_a:
+                broadcast({"tipo": "recursos_atualizados", "valores": rec_a})
+                broadcast({"tipo": "mundo_atualizado"})
             if rol_npc:
                 broadcast({"tipo": "rolagem_ia", "rolagens": rol_npc})
         except Exception as e:
@@ -2520,7 +2798,7 @@ def reset_cronica():
             con.commit()
         mensagens_chat.clear()
         balde_acoes.clear()
-        _mid_session_summaries = []
+        _limpar_resumos_intermediarios()
         _backup_mensagens_unsafe([])
         try:
             if os.path.exists(BACKUP_PATH):
@@ -2549,6 +2827,7 @@ def limpar_chat():
             con.commit()
         mensagens_chat.clear()
         balde_acoes.clear()
+        _limpar_resumos_intermediarios()
         _backup_mensagens_unsafe([])
         try:
             if os.path.exists(BACKUP_PATH):
@@ -2592,6 +2871,14 @@ def consulta_mestre():
     canon = obter_canon()
     if canon:
         system = system + '\n\n=== CÂNONE DA CRÔNICA ===\n' + canon
+
+    # Cena atual — sem isto, perguntas como "o que está acontecendo?" recebem
+    # resposta só do cânone, cega para a sessão em andamento.
+    with _chat_lock:
+        recentes = list(mensagens_chat[-10:])
+    if recentes:
+        cena = '\n'.join(f"[{m['autor']}]: {m['texto'][:400]}" for m in recentes)
+        system = system + '\n\n=== CENA ATUAL — ÚLTIMAS MENSAGENS DA SESSÃO ===\n' + cena
 
     def generate():
         try:
@@ -2653,13 +2940,23 @@ def resumo_sessao():
 
     mensagens_api = [{"role": "system", "content": prompt_resumo}]
 
+    # O início de sessões longas vive nos resumos de compressão — sem isto,
+    # o resumo final cobriria apenas o trecho recente que sobrou em mensagens_chat.
+    if _mid_session_summaries:
+        bloco = '\n\n---\n\n'.join(_mid_session_summaries)
+        mensagens_api.append({
+            "role": "user",
+            "content": "[INÍCIO DA SESSÃO — trecho já comprimido pelo arquivista]\n" + bloco
+        })
+        mensagens_api.append({"role": "assistant", "content": "Trecho inicial registrado. Aguardo as mensagens restantes."})
+
     for msg in snapshot:
         if msg["autor"] == "Mestre (IA)":
             mensagens_api.append({"role": "assistant", "content": msg['texto']})
         else:
             mensagens_api.append({"role": "user", "content": f"{msg['autor']}: {msg['texto']}"})
 
-    mensagens_api.append({"role": "user", "content": "Gere o resumo completo da sessão."})
+    mensagens_api.append({"role": "user", "content": "Gere o resumo completo da sessão (incluindo o trecho inicial comprimido, se houver)."})
 
     try:
         response = get_client().chat.completions.create(
@@ -2671,6 +2968,100 @@ def resumo_sessao():
         return jsonify({'resumo': response.choices[0].message.content})
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
+
+
+def _gerar_proposta_canon(numero_sessao, resumo):
+    """Canon keeper: gera em background uma proposta de cânone atualizado com os
+    eventos da sessão arquivada. A proposta fica pendente no painel admin até o
+    mestre revisar e aplicar — a IA nunca altera o cânone sozinha."""
+    try:
+        canon_atual = obter_canon()
+        prompt_sistema = (
+            "Você é o arquivista-chefe de uma crônica de Vampiro: A Máscara 5E. "
+            "Sua única tarefa: atualizar o CÂNONE FIXO da crônica incorporando os eventos "
+            "da sessão recém-encerrada.\n\n"
+            "REGRAS ABSOLUTAS:\n"
+            "- Preserve a estrutura e TODAS as seções do cânone atual.\n"
+            "- NÃO invente nada que não esteja no cânone atual ou no resumo da sessão.\n"
+            "- Atualize: ESTADO ATUAL, FIOS EM ABERTO (resolva os encerrados, adicione os novos), "
+            "NPCs (novos conhecidos, INFLUENCIABILIDADE/CONFIABILIDADE alteradas por eventos concretos), "
+            "RELÓGIOS e revelações que viraram fato estabelecido.\n"
+            "- NÃO remova segredos de design narrativo ainda não revelados aos jogadores.\n"
+            "- Retorne APENAS o texto completo do cânone atualizado, sem comentários nem markdown extra."
+        )
+        response = get_client().chat.completions.create(
+            model="deepseek-v4-pro",
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": f"=== CÂNONE ATUAL ===\n{canon_atual}\n\n=== RESUMO DA SESSÃO {numero_sessao} ===\n{resumo}"},
+            ],
+            max_tokens=8000,
+            temperature=0.2,
+            timeout=API_TIMEOUT,
+        )
+        proposta = response.choices[0].message.content.strip()
+        if not proposta:
+            return
+        with _db() as con:
+            con.execute(
+                'INSERT INTO canon_propostas (numero_sessao, proposta) VALUES (?, ?)',
+                (numero_sessao, proposta)
+            )
+            con.commit()
+        app.logger.info('Canon keeper: proposta da sessão %s pronta para revisão', numero_sessao)
+    except Exception as e:
+        app.logger.error('Canon keeper falhou: %s', e)
+
+
+@app.route('/admin/canon-propostas', methods=['GET'])
+@admin_required
+def admin_canon_propostas():
+    with _db() as con:
+        rows = con.execute(
+            "SELECT id, numero_sessao, proposta, criado_em FROM canon_propostas "
+            "WHERE status = 'pendente' ORDER BY id DESC"
+        ).fetchall()
+    return jsonify({'propostas': [
+        {'id': r[0], 'numero_sessao': r[1], 'proposta': r[2], 'criado_em': r[3]} for r in rows
+    ]})
+
+
+@app.route('/admin/canon-propostas/<int:pid>', methods=['POST', 'DELETE'])
+@admin_required
+def admin_canon_proposta(pid):
+    if request.method == 'DELETE':
+        with _db() as con:
+            con.execute("UPDATE canon_propostas SET status = 'descartada' WHERE id = ?", (pid,))
+            con.commit()
+        return jsonify({'status': 'ok'})
+    # POST: aplica a proposta (o admin pode ter editado o texto antes de aplicar)
+    dados = request.get_json(silent=True) or {}
+    conteudo = (dados.get('conteudo') or '').strip()
+    if not conteudo:
+        with _db() as con:
+            row = con.execute('SELECT proposta FROM canon_propostas WHERE id = ?', (pid,)).fetchone()
+        if not row:
+            return jsonify({'erro': 'Proposta não encontrada'}), 404
+        conteudo = row[0]
+    with _canon_lock:
+        with _db() as con:
+            con.execute('UPDATE canon SET conteudo = ? WHERE id = 1', (conteudo,))
+            con.execute("UPDATE canon_propostas SET status = 'aplicada' WHERE id = ?", (pid,))
+            con.commit()
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/admin/diario', methods=['GET'])
+@admin_required
+def admin_diario():
+    """Diário do Mestre — raciocínio interno do modelo por turno, para depurar a narração."""
+    with _db() as con:
+        rows = con.execute(
+            'SELECT id, resposta_inicio, raciocinio, criado_em FROM mestre_log ORDER BY id DESC LIMIT 20'
+        ).fetchall()
+    return jsonify({'entradas': [
+        {'id': r[0], 'resposta_inicio': r[1], 'raciocinio': r[2], 'criado_em': r[3]} for r in rows
+    ]})
 
 
 @app.route('/salvar_sessao', methods=['POST'])
@@ -2698,8 +3089,13 @@ def salvar_sessao():
     with _chat_lock:
         mensagens_chat.clear()
         balde_acoes.clear()
-        _mid_session_summaries = []
+        _limpar_resumos_intermediarios()
         _backup_mensagens_unsafe([])
+
+    # Canon keeper: gera proposta de atualização do cânone em background
+    threading.Thread(
+        target=_gerar_proposta_canon, args=(numero_sessao, resumo), daemon=True
+    ).start()
 
     broadcast({"tipo": "chat_limpo"})
     return jsonify({'status': 'ok', 'numero_sessao': numero_sessao})
@@ -2745,6 +3141,11 @@ def save_avatar():
     avatar = (dados.get('avatar') or '').strip()
     capa = (dados.get('capa') or '').strip()
     jogador = session['jogador']
+    slug = re.sub(r'[^a-z0-9]', '_', jogador.lower())
+    if avatar and avatar.startswith('data:'):
+        avatar = upload_imagem_r2(avatar, 'avatares', slug)
+    if capa and capa.startswith('data:'):
+        capa = upload_imagem_r2(capa, 'capas', slug)
     with _db() as con:
         if avatar:
             con.execute(
@@ -2757,7 +3158,7 @@ def save_avatar():
                 (capa, jogador)
             )
         con.commit()
-    return jsonify({'status': 'ok'})
+    return jsonify({'status': 'ok', 'avatar': avatar or None, 'capa': capa or None})
 
 
 @app.route('/ficha', methods=['POST'])
@@ -2861,14 +3262,74 @@ def _processar_fome_tag(texto):
                            ON CONFLICT(jogador) DO UPDATE SET hunger=excluded.hunger''',
                         (nome, qtd)
                     )
+                    # Sincroniza o JSON da ficha — sem isto, jogador offline fica
+                    # com 'fome' defasada e o frontend mostra valor antigo no login.
+                    ficha_row = con.execute('SELECT dados FROM fichas WHERE jogador = ?', (nome,)).fetchone()
+                    if ficha_row:
+                        ficha = json.loads(ficha_row[0]) if ficha_row[0] else {}
+                        ficha['fome'] = qtd
+                        con.execute('UPDATE fichas SET dados = ? WHERE jogador = ?', (json.dumps(ficha), nome))
                     con.commit()
                 atualizados[nome] = qtd
     texto_limpo = re.sub(r'\s*\[FOME:[^\]]+\]', '', texto).rstrip()
     return texto_limpo, atualizados
 
 
+def _processar_recurso_tag(texto):
+    """Detecta [RECURSO: Lior willpower=4, Fryderyk humanity=6] e atualiza recursos no banco.
+
+    Dá ao Mestre controle sobre Vontade, Vitalidade e Humanidade — estados que
+    ele narra (gasto de Vontade, dano, Manchas) mas que antes só o admin mudava.
+    """
+    match = re.search(r'\[RECURSO:\s*([^\]]+)\]', texto, re.IGNORECASE)
+    if not match:
+        return texto, {}
+    _CAMPOS = {'willpower', 'health', 'humanity'}
+    atualizados = {}
+    for parte in match.group(1).split(','):
+        m = re.match(r'\s*(Lior|Fryderyk)\s+(\w+)\s*=\s*(\d+)\s*$', parte.strip(), re.IGNORECASE)
+        if not m:
+            continue
+        nome = m.group(1).capitalize()
+        campo = m.group(2).lower()
+        if campo not in _CAMPOS:
+            continue
+        valor = max(0, min(10, int(m.group(3))))
+        with _db() as con:
+            con.execute(
+                f'''INSERT INTO recursos (jogador, {campo}) VALUES (?, ?)
+                    ON CONFLICT(jogador) DO UPDATE SET {campo}=excluded.{campo},
+                    atualizado_em=datetime('now','localtime')''',
+                (nome, valor)
+            )
+            con.commit()
+        atualizados.setdefault(nome, {})[campo] = valor
+    texto_limpo = re.sub(r'\s*\[RECURSO:[^\]]+\]', '', texto, flags=re.IGNORECASE).rstrip()
+    return texto_limpo, atualizados
+
+
+def _salvar_diario_mestre(raciocinio, resposta):
+    """Persiste o raciocínio interno do modelo no Diário do Mestre (visível só no admin)."""
+    raciocinio = (raciocinio or '').strip()
+    if not raciocinio:
+        return
+    try:
+        with _db() as con:
+            con.execute(
+                'INSERT INTO mestre_log (resposta_inicio, raciocinio) VALUES (?, ?)',
+                ((resposta or '')[:300], raciocinio)
+            )
+            # Mantém só as últimas 50 entradas
+            con.execute(
+                'DELETE FROM mestre_log WHERE id NOT IN (SELECT id FROM mestre_log ORDER BY id DESC LIMIT 50)'
+            )
+            con.commit()
+    except Exception as e:
+        app.logger.warning('Falha ao salvar diário do mestre: %s', e)
+
+
 # Prefixos de tags de controle — usados para suprimir do stream ao vivo e limpar o texto salvo.
-_CONTROL_RE = re.compile(r'\[(?:XP|FOME|RELOGIO|SEMENTE|COLHEU|PRESTACAO)\b', re.IGNORECASE)
+_CONTROL_RE = re.compile(r'\[(?:XP|FOME|RECURSO|RELOGIO|SEMENTE|COLHEU|PRESTACAO|ROLAR)\b', re.IGNORECASE)
 
 
 def _processar_tags_mundo(texto):
@@ -3141,6 +3602,8 @@ init_db()
 carregar_historico_db()
 _restaurar_balde()
 _restaurar_historico()
+_restaurar_resumos_intermediarios()
+_init_rolagens_watermark()
 
 
 EDGE_TTS_VOICE = "pt-BR-ThalitaNeural"

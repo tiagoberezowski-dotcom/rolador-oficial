@@ -371,6 +371,28 @@
         </details>
     </div>
 
+    <!-- 6. PROPOSTAS DE CÂNONE -->
+    <div class="card">
+        <details>
+            <summary>PROPOSTAS DE CÂNONE — canon keeper <span id="cp-badge" style="color:var(--texto-fraco)"></span></summary>
+            <div class="card-body">
+                <p class="aviso">Ao salvar uma sessão, a IA propõe um cânone atualizado com os eventos. Revise (e edite, se quiser) antes de aplicar — nada muda sem sua aprovação.</p>
+                <div id="lista-propostas"><p class="mundo-vazio">Carregando...</p></div>
+            </div>
+        </details>
+    </div>
+
+    <!-- 7. DIÁRIO DO MESTRE -->
+    <div class="card">
+        <details>
+            <summary>DIÁRIO DO MESTRE — raciocínio interno da IA</summary>
+            <div class="card-body">
+                <p class="aviso">O raciocínio que o modelo produz antes de cada narração. Contém segredos de trama — nunca visível aos jogadores. Útil para entender por que o narrador tomou uma decisão.</p>
+                <div id="lista-diario"><p class="mundo-vazio">Carregando...</p></div>
+            </div>
+        </details>
+    </div>
+
 </div><!-- /container -->
 
 <script>
@@ -598,10 +620,71 @@ function escHtml(s) {
 }
 
 /* ──────────────────────────────────────────
+   PROPOSTAS DE CÂNONE (canon keeper)
+─────────────────────────────────────────── */
+async function carregarPropostas() {
+    const resp = await fetch('/admin/canon-propostas');
+    const d = await resp.json();
+    const lista = d.propostas || [];
+    const badge = document.getElementById('cp-badge');
+    badge.textContent = lista.length ? `(${lista.length} pendente${lista.length > 1 ? 's' : ''})` : '';
+    const el = document.getElementById('lista-propostas');
+    if (!lista.length) { el.innerHTML = '<p class="mundo-vazio">Nenhuma proposta pendente.</p>'; return; }
+    el.innerHTML = lista.map(p => `
+        <div class="mundo-item" id="cp-${p.id}" style="flex-direction:column; align-items:stretch; gap:10px;">
+            <div class="mundo-item-nome">Sessão ${p.numero_sessao ?? '?'} · ${escHtml(p.criado_em || '')}</div>
+            <textarea id="cp-texto-${p.id}" style="min-height:300px; width:100%;">${escHtml(p.proposta)}</textarea>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button class="btn btn-acao" onclick="aplicarProposta(${p.id})">APLICAR AO CÂNONE</button>
+                <button class="btn btn-perigo" onclick="descartarProposta(${p.id})">DESCARTAR</button>
+                <span id="cp-flash-${p.id}" class="flash" style="display:none"></span>
+            </div>
+        </div>`).join('');
+}
+
+async function aplicarProposta(id) {
+    if (!confirm('Substituir o cânone atual por esta proposta?')) return;
+    const conteudo = document.getElementById('cp-texto-' + id).value.trim();
+    const resp = await api('/admin/canon-propostas/' + id, 'POST', { conteudo });
+    if (resp.ok) {
+        flash('cp-flash-' + id, 'Cânone atualizado.', 'ok');
+        carregarCanon();
+        setTimeout(carregarPropostas, 1200);
+    } else flash('cp-flash-' + id, 'Erro', 'err');
+}
+
+async function descartarProposta(id) {
+    if (!confirm('Descartar esta proposta?')) return;
+    const resp = await api('/admin/canon-propostas/' + id, 'DELETE');
+    if (resp.ok) document.getElementById('cp-' + id)?.remove();
+}
+
+/* ──────────────────────────────────────────
+   DIÁRIO DO MESTRE
+─────────────────────────────────────────── */
+async function carregarDiario() {
+    const resp = await fetch('/admin/diario');
+    const d = await resp.json();
+    const lista = d.entradas || [];
+    const el = document.getElementById('lista-diario');
+    if (!lista.length) { el.innerHTML = '<p class="mundo-vazio">Nenhuma entrada ainda. O diário registra o raciocínio a cada turno do Mestre.</p>'; return; }
+    el.innerHTML = lista.map(e => `
+        <div class="mundo-item" style="flex-direction:column; align-items:stretch; gap:6px;">
+            <div class="mundo-item-nome">${escHtml(e.criado_em || '')} · "${escHtml((e.resposta_inicio || '').slice(0, 90))}…"</div>
+            <details>
+                <summary style="cursor:pointer; color:var(--texto-fraco); font-size:0.85rem;">ver raciocínio</summary>
+                <pre style="white-space:pre-wrap; font-size:0.8rem; color:var(--texto-fraco); margin:8px 0 0;">${escHtml(e.raciocinio)}</pre>
+            </details>
+        </div>`).join('');
+}
+
+/* ──────────────────────────────────────────
    INIT
 ─────────────────────────────────────────── */
 carregarCanon();
 carregarMundo();
+carregarPropostas();
+carregarDiario();
 </script>
 </body>
 </html>
