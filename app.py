@@ -387,8 +387,7 @@ API_TIMEOUT = 120
 historico = []
 
 # --- Banco de Dados ---
-# No Render, usa /var/data (disco persistente). Localmente, usa a raiz do projeto.
-DB_PATH = '/var/data/banco.db'
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'banco.db')
 BACKUP_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backup_mensagens.json')
 
 _canon_lock = threading.Lock()
@@ -926,23 +925,51 @@ def broadcast(evento: dict):
         for cid in mortos:
             del _subscribers[cid]
 
+_groq_key_index = 0
+_groq_key_lock = threading.Lock()
+
+def _get_groq_chaves():
+    chaves = []
+    for var in ('GROQ_API_KEY', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3'):
+        v = os.environ.get(var, '').strip()
+        if v:
+            chaves.append(v)
+    return chaves
+
 def get_client():
     chave = os.environ.get('DEEPSEEK_API_KEY', '')
     if not chave:
         raise ValueError("DEEPSEEK_API_KEY não configurada nas variáveis de ambiente.")
     return OpenAI(api_key=chave, base_url="https://api.deepseek.com")
 
+def _rotacionar_chave_groq():
+    global _groq_key_index
+    with _groq_key_lock:
+        _groq_key_index += 1
+    chaves = _get_groq_chaves()
+    app.logger.warning("Rate limit Groq — alternando para chave %d/%d", (_groq_key_index % len(chaves)) + 1, len(chaves))
 
-def _get_briefing_client():
-    """Retorna cliente OpenAI-compatible para o pré-processador de cena.
-    Usa BRIEFING_API_KEY + BRIEFING_BASE_URL + BRIEFING_MODEL.
-    Retorna None se BRIEFING_API_KEY não estiver definida — desabilita silenciosamente."""
-    chave = os.environ.get('BRIEFING_API_KEY', '')
-    if not chave:
-        return None, None
-    base_url = os.environ.get('BRIEFING_BASE_URL', 'https://api.deepseek.com')
-    modelo = os.environ.get('BRIEFING_MODEL', 'deepseek-chat')
-    return OpenAI(api_key=chave, base_url=base_url), modelo
+
+def _get_briefing_clientes():
+    """Retorna lista de (cliente, modelo) para o pré-processador de cena com fallback.
+    Prioridade: BRIEFING_API_KEY dedicada; senão usa as chaves Groq principais."""
+    base_url = os.environ.get('BRIEFING_BASE_URL', 'https://api.groq.com/openai/v1')
+    modelo = os.environ.get('BRIEFING_MODEL', 'llama-3.1-8b-instant')
+
+    # Chaves dedicadas ao briefing (BRIEFING_API_KEY, BRIEFING_API_KEY_2)
+    chaves = []
+    for var in ('BRIEFING_API_KEY', 'BRIEFING_API_KEY_2'):
+        v = os.environ.get(var, '').strip()
+        if v:
+            chaves.append(v)
+
+    # Fallback: usa as chaves Groq principais se não houver dedicadas
+    if not chaves:
+        chaves = _get_groq_chaves()
+
+    if not chaves:
+        return []
+    return [(OpenAI(api_key=c, base_url=base_url), modelo) for c in chaves]
 
 
 def _estado_personagens():
@@ -1011,8 +1038,8 @@ def _estado_mundo():
 def _preparar_briefing_cena(acoes, ultimas_msgs, estado_pers, estado_mundo_raw):
     """Chama o segundo modelo com um prompt compacto e retorna um briefing estruturado.
     Retorna None em qualquer falha (cliente ausente, timeout, erro de API)."""
-    cliente, modelo = _get_briefing_client()
-    if cliente is None:
+    clientes = _get_briefing_clientes()
+    if not clientes:
         return None
 
     # Monta o texto das ações
@@ -1056,23 +1083,30 @@ MECÂNICA: [pool sugerido; se resistido, indique a oposição; se narrativo puro
 ALERTA: [se a ação pressupõe resultado sem rolagem, ex: "convenço X" → lembrar o Narrador de pedir dados primeiro]
 CONTEXTO: [1-3 itens do estado do mundo diretamente relevantes para esta ação]"""
 
-    try:
-        resp = cliente.chat.completions.create(
-            model=modelo,
-            messages=[
-                {"role": "system", "content": prompt_sistema},
-                {"role": "user", "content": prompt_usuario},
-            ],
-            max_tokens=220,
-            temperature=0.1,
-            timeout=8,
-        )
-        briefing = resp.choices[0].message.content.strip()
-        app.logger.info("Briefing de cena pronto (%d chars): %s", len(briefing), briefing[:80])
-        return briefing
-    except Exception as exc:
-        app.logger.warning("Preparador de cena falhou (%s) — continuando sem briefing", exc)
-        return None
+    for cliente, modelo in clientes:
+        try:
+            resp = cliente.chat.completions.create(
+                model=modelo,
+                messages=[
+                    {"role": "system", "content": prompt_sistema},
+                    {"role": "user", "content": prompt_usuario},
+                ],
+                max_tokens=220,
+                temperature=0.1,
+                timeout=8,
+            )
+            briefing = resp.choices[0].message.content.strip()
+            app.logger.info("Briefing de cena pronto (%d chars): %s", len(briefing), briefing[:80])
+            return briefing
+        except Exception as exc:
+            erro_str = str(exc).lower()
+            if 'rate_limit' in erro_str or '429' in erro_str or '413' in erro_str:
+                app.logger.warning("Briefing: rate limit na chave atual, tentando próxima — %s", exc)
+                continue
+            app.logger.warning("Preparador de cena falhou (%s) — continuando sem briefing", exc)
+            return None
+    app.logger.warning("Briefing: todas as chaves Groq no limite — continuando sem briefing")
+    return None
 
 
 def _iniciar_briefing_background(acoes_snapshot):
@@ -1666,7 +1700,6 @@ Cidades-exemplo a oferecer (não use como lista mecânica — integre na prosa):
             "content": f"Ações simultâneas:\n1) {acao_1}\n2) {acao_2}\n\nNarre o resultado dessas ações e avance a cena."
         })
 
-    # Faz a ligação para a DeepSeek!
     try:
         if stream:
             return get_client().chat.completions.create(
@@ -2489,6 +2522,11 @@ def reset_cronica():
         balde_acoes.clear()
         _mid_session_summaries = []
         _backup_mensagens_unsafe([])
+        try:
+            if os.path.exists(BACKUP_PATH):
+                os.remove(BACKUP_PATH)
+        except Exception:
+            pass
 
     with _turno_lock:
         _resetar_turno()
@@ -2512,6 +2550,11 @@ def limpar_chat():
         mensagens_chat.clear()
         balde_acoes.clear()
         _backup_mensagens_unsafe([])
+        try:
+            if os.path.exists(BACKUP_PATH):
+                os.remove(BACKUP_PATH)
+        except Exception:
+            pass
     with _turno_lock:
         _resetar_turno()
     broadcast({"tipo": "chat_limpo"})
@@ -2553,7 +2596,7 @@ def consulta_mestre():
     def generate():
         try:
             stream = get_client().chat.completions.create(
-                model="deepseek-chat",
+                model="deepseek-v4-pro",
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": pergunta}

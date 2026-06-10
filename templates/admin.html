@@ -403,9 +403,8 @@ async function confirmarNovoArco() {
     if (!senha) { flash('na-flash', 'Informe a senha mestre', 'err'); return; }
     const resp = await api('/reset_cronica', 'POST', { senha });
     if (resp.ok) {
-        flash('na-flash', 'Crônica resetada.', 'ok');
-        document.getElementById('na-confirma').value = '';
-        document.getElementById('na-senha').value = '';
+        flash('na-flash', 'Crônica resetada. Redirecionando...', 'ok');
+        setTimeout(() => { window.location.href = '/'; }, 1500);
     } else {
         const d = await resp.json();
         flash('na-flash', d.erro || 'Erro.', 'err');
