@@ -14,8 +14,9 @@ Hospedado em VM própria no **Google Cloud Platform**.
 | IP externo | `146.148.51.209` |
 | Usuário | `tiagoberezowski` |
 | Código | `/home/tiagoberezowski/rolador-oficial/` |
-| Serviço | `rolador.service` (systemd + gunicorn) |
-| Proxy | nginx |
+| Serviço | `rolador.service` (systemd + gunicorn, `--bind 127.0.0.1:5001`, 2 workers) |
+| Proxy | nginx → `proxy_pass http://127.0.0.1:5001` |
+| Domínio | `berezowski.dev` / `www.berezowski.dev` (HTTPS) |
 | Banco | SQLite em `/home/tiagoberezowski/rolador-oficial/banco.db` |
 
 > A mesma VM é o "site do Tiago" no free tier forever — **não desligar nem apagar**.
@@ -46,7 +47,12 @@ git@github.com:tiagoberezowski-dotcom/rolador-oficial.git
 4. Conferir que subiu:
    ```bash
    systemctl is-active rolador.service
+   curl -sI https://berezowski.dev/login   # deve dar HTTP 200
    ```
+
+> Acessar pelo **IP cru** (`146.148.51.209`) dá **404** — é esperado: o nginx
+> serve o app só no `server_name berezowski.dev`; o IP cai no `default_server`.
+> Sempre teste pelo domínio.
 
 ## Comandos úteis no servidor
 
