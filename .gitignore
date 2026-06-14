@@ -9,3 +9,5 @@ backup_mensagens.json
 dist/
 build/
 .pytest_cache/
+.claude/
+AUDIOS DESCARTE/
