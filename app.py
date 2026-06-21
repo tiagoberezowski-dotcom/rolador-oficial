@@ -3710,7 +3710,7 @@ _tts_generating_cond = threading.Condition()
 
 def criar_wav_header_streaming(rate=24000, bits=16, channels=1):
     import struct
-    datasize = 0xFFFFFFFF
+    datasize = 0x7FFFFFFF
     riffsize = datasize + 36
     header = b'RIFF' + struct.pack('<I', riffsize) + b'WAVE'
     header += b'fmt ' + struct.pack('<I', 16)
