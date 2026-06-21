@@ -14,7 +14,7 @@ Hospedado em VM própria no **Google Cloud Platform**.
 | IP externo | `146.148.51.209` |
 | Usuário | `tiagoberezowski` |
 | Código | `/home/tiagoberezowski/rolador-oficial/` |
-| Serviço | `rolador.service` (systemd + gunicorn, `--workers 2 --threads 8`, bind `127.0.0.1:5001`) |
+| Serviço | `rolador.service` (systemd + gunicorn, `--workers 1 --threads 16`, bind `127.0.0.1:5001`) |
 | Proxy | nginx → `proxy_pass http://127.0.0.1:5001` |
 | Domínio | `berezowski.dev` / `www.berezowski.dev` (HTTPS) |
 | Banco | SQLite em `/home/tiagoberezowski/rolador-oficial/banco.db` |
@@ -58,7 +58,7 @@ git@github.com:tiagoberezowski-dotcom/rolador-oficial.git
 
 O unit do systemd está versionado em [`deploy/rolador.service`](deploy/rolador.service). Ao recriar a VM, copiar para `/etc/systemd/system/rolador.service` e rodar `sudo systemctl daemon-reload && sudo systemctl enable --now rolador.service`.
 
-**gunicorn usa `--workers 2 --threads 8` (worker class `gthread`).** As threads são essenciais: o endpoint `/eventos` é SSE de verdade e segura uma conexão aberta por jogador; com workers sync sem threads, 2 jogadores conectados saturavam os 2 workers e o app travava pra todos.
+**gunicorn usa `--workers 1 --threads 16` (worker class `gthread`).** O uso de apenas 1 worker é OBRIGATÓRIO pois o app possui estados globais em memória RAM (`mensagens_chat`). Usar múltiplos workers causava dessincronização de estado (o chat ficava abrindo e fechando vazio em loop). As threads são essenciais: o endpoint `/eventos` é SSE de verdade e segura uma conexão aberta por jogador. Com 1 worker e 16 threads, evitamos state mismatch e mantemos alta concorrência para o SSE.
 
 **`.env` (NÃO versionado — gitignored) — chaves usadas pelo `app.py`:**
 
