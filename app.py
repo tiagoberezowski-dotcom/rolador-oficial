@@ -3608,6 +3608,17 @@ _init_rolagens_watermark()
 
 EDGE_TTS_VOICE = "pt-BR-ThalitaNeural"
 
+# Motor de TTS: 'gemini' = Gemini 3.1 TTS (voz Umbriel) com cache no R2 e fallback
+# automático pro edge-tts; 'edge' = só edge-tts. Tudo configurável por env.
+TTS_ENGINE = os.environ.get('TTS_ENGINE', 'gemini').lower()
+GEMINI_TTS_MODEL = os.environ.get('GEMINI_TTS_MODEL', 'gemini-3.1-flash-tts-preview')
+GEMINI_TTS_VOICE = os.environ.get('GEMINI_TTS_VOICE', 'Umbriel')
+GEMINI_TTS_STYLE = os.environ.get(
+    'GEMINI_TTS_STYLE',
+    'Leia em voz alta como um narrador de RPG de mesa: voz masculina natural, '
+    'firme e envolvente, em ritmo normal de fala, sem sussurrar e sem arrastar as palavras. Texto: '
+)
+
 # Cache de tokens TTS: {token: (texto, timestamp)}
 # Tokens expiram após 120 segundos.
 _tts_cache: dict = {}
@@ -3646,6 +3657,75 @@ def _preparar_texto_tts(texto: str) -> str:
     return _strip_audio_tags(acumulado)
 
 
+def _tts_hash(texto: str) -> str:
+    """Chave de cache determinística por conteúdo (modelo+voz+estilo+texto)."""
+    import hashlib
+    base = f'{GEMINI_TTS_MODEL}|{GEMINI_TTS_VOICE}|{GEMINI_TTS_STYLE}|{texto}'
+    return hashlib.sha256(base.encode('utf-8')).hexdigest()
+
+
+def _tts_gerar_gemini(texto: str):
+    """Gera o áudio no Gemini TTS e devolve WAV (bytes). None em qualquer falha (cai pro edge-tts)."""
+    import json as _json, base64 as _b64, io as _io, wave as _wave
+    import urllib.request as _ur
+    chave = os.environ.get('GEMINI_TTS_API_KEY') or os.environ.get('GOOGLE_API_KEY', '')
+    if not chave:
+        return None
+    url = (f'https://generativelanguage.googleapis.com/v1beta/models/'
+           f'{GEMINI_TTS_MODEL}:generateContent?key={chave}')
+    body = _json.dumps({
+        "contents": [{"parts": [{"text": GEMINI_TTS_STYLE + texto}]}],
+        "generationConfig": {
+            "responseModalities": ["AUDIO"],
+            "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": GEMINI_TTS_VOICE}}},
+        },
+    }).encode('utf-8')
+    req = _ur.Request(url, data=body, headers={'Content-Type': 'application/json'})
+    try:
+        with _ur.urlopen(req, timeout=60) as resp:
+            data = _json.load(resp)
+        part = data['candidates'][0]['content']['parts'][0]['inlineData']
+        pcm = _b64.b64decode(part['data'])
+        mime = part.get('mimeType', '')
+        rate = int(mime.split('rate=')[1].split(';')[0]) if 'rate=' in mime else 24000
+        buf = _io.BytesIO()
+        with _wave.open(buf, 'wb') as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate); w.writeframes(pcm)
+        return buf.getvalue()
+    except Exception as e:
+        app.logger.warning('TTS Gemini falhou (%s) - usando edge-tts', str(e)[:140])
+        return None
+
+
+def _tts_r2_chave(texto: str) -> str:
+    return f'tts/{_tts_hash(texto)}.wav'
+
+
+def _tts_r2_url_existente(texto: str):
+    """Se o áudio já está no R2, devolve a URL pública (cache hit); senão None."""
+    if not R2_BUCKET:
+        return None
+    chave = _tts_r2_chave(texto)
+    try:
+        _r2().head_object(Bucket=R2_BUCKET, Key=chave)
+        return f'{R2_PUBLIC_URL}/{chave}'
+    except Exception:
+        return None
+
+
+def _tts_r2_salvar(texto: str, wav: bytes):
+    """Sobe o WAV no R2 e devolve a URL pública (None se R2 desligado/erro)."""
+    if not R2_BUCKET:
+        return None
+    chave = _tts_r2_chave(texto)
+    try:
+        _r2().put_object(Bucket=R2_BUCKET, Key=chave, Body=wav, ContentType='audio/wav')
+        return f'{R2_PUBLIC_URL}/{chave}'
+    except Exception as e:
+        app.logger.warning('TTS upload R2 falhou: %s', str(e)[:140])
+        return None
+
+
 @app.route('/tts', methods=['POST'])
 @login_required
 def tts():
@@ -3667,7 +3747,8 @@ def tts():
 @app.route('/tts/audio/<token>')
 @login_required
 def tts_audio(token):
-    """Streama o áudio MP3 diretamente — o browser começa a tocar enquanto baixa."""
+    """Serve o áudio da narração. Gemini TTS com cache no R2 (gera 1x por texto e
+    reusa para todos os jogadores/replays); fallback automático pro edge-tts."""
     import asyncio
     import edge_tts
 
@@ -3686,6 +3767,20 @@ def tts_audio(token):
     with _tts_cache_lock:
         _tts_cache.pop(token, None)
 
+    # --- Gemini TTS com cache no R2: gera 1x por texto, reusa sem cobrar de novo ---
+    if TTS_ENGINE == 'gemini':
+        cache_url = _tts_r2_url_existente(texto)
+        if cache_url:
+            return redirect(cache_url)
+        wav = _tts_gerar_gemini(texto)
+        if wav:
+            url = _tts_r2_salvar(texto, wav)
+            if url:
+                return redirect(url)
+            return Response(wav, mimetype='audio/wav', headers={'Cache-Control': 'no-store'})
+        # Gemini falhou (cota/erro): cai pro edge-tts abaixo.
+
+    # --- Fallback: edge-tts (streaming) ---
     async def _stream_gen():
         communicate = edge_tts.Communicate(texto, EDGE_TTS_VOICE)
         async for chunk in communicate.stream():
