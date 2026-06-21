@@ -461,7 +461,7 @@ Vantagens: Resources, Retainer Igor (banco de sangue), Herd 1, Haven 4
 Defeitos: Prey Exclusion | Maldição: Fractured Perspective
 Em uma frase: um homem construído em torno de controle e ausência — que pode ter erguido essa vida de controle justamente porque o alicerce foi roubado, e que talvez nem saiba o que perdeu.
 
-Fryderyk Rozynski | Toreador | ele/dele | 10ª geração | nascido 1926, abraçado 1956
+Fryderyk Rozynski | Tremere | ele/dele | 10ª geração | nascido 1926, abraçado 1956
 Senhor: Elijahu Zvi Rosenlicht (ANTAGONISTA) | Pilar/Touchstone: Marek Zielinski | Convicção: preservar as centelhas sagradas
 Stats: Charisma 4, Manipulation 3, Composure 3, Intelligence 3, Strength 1
 Skills: Persuasion 3, Politics/Diplomacy 3, Investigation 3, Subterfuge 2, Etiquette 2
@@ -492,7 +492,7 @@ Skrzypek "O Violinista" — Kindred recolhedor | Olhos que devolvem luz errada |
 
 ESTRUTURA DA PARTITURA (revelado por Fryderyk, Noite 3)
 Árvore da Vida deformada — 10 sefirot, cada uma um clã:
-Keter (vazia — lugar do Mashiach) | Chochmá: Ventrue | Biná: Lasombra | Chessed: Brujah | Guevurá: Gangrel | Tiferet: TOREADOR (centro — Fryderyk) | Netzach: Malkavian | Hod: Tremere | Yessod: Nosferatu | Malchut: Banu Haqim
+Keter (vazia — lugar do Mashiach) | Chochmá: Ventrue | Biná: Lasombra | Chessed: Brujah | Guevurá: Gangrel | Tiferet: TREMERE (centro — Fryderyk) | Netzach: Malkavian | Hod: Toreador | Yessod: Nosferatu | Malchut: Banu Haqim
 Os 16 compassos finais estão em branco — reservados para Fryderyk. A centelha de Tiferet deve ser OFERTADA, não arrancada. Por isso: capturar vivo e inteiro.
 
 ESTADO ATUAL (pós-Noite 3)
@@ -580,7 +580,7 @@ Vantagens: Resources, Retainer Igor (banco de sangue), Herd 1, Haven 4
 Defeitos: Prey Exclusion | Maldição: Fractured Perspective
 Em uma frase: um homem construído em torno de controle e ausência.
 
-Fryderyk Rozynski | Toreador | ele/dele | 10ª geração | nascido 1926, abraçado 1956
+Fryderyk Rozynski | Tremere | ele/dele | 10ª geração | nascido 1926, abraçado 1956
 Senhor: Elijahu Zvi Rosenlicht (ausente, localização desconhecida) | Pilar/Touchstone: Marek Zielinski | Convicção: preservar as centelhas sagradas
 Stats: Charisma 4, Manipulation 3, Composure 3, Intelligence 3, Strength 1
 Skills: Persuasion 3, Politics/Diplomacy 3, Investigation 3, Subterfuge 2, Etiquette 2
@@ -2360,7 +2360,7 @@ def _lista_de_d10_valida(lista):
 def index():
     info_personagem = {
         'Lior': 'Malkavian · Ancilla · Sandman',
-        'Fryderyk': 'Toreador · Ancilla · Osiris',
+        'Fryderyk': 'Tremere · Ancilla · Osiris',
     }
     nome_completo = {
         'Lior': 'Lior Kovalenko',

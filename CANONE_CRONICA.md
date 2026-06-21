@@ -26,7 +26,7 @@ Estado atual: Hunger 2 · Humanity 7 · Willpower 5
 Em uma frase: um homem construído inteiro em torno de controle e ausência, que pode ter erguido uma vida de controle justamente porque o alicerce — quem ele era — lhe foi roubado, e que talvez nem saiba o que perdeu.
 
 Fryderyk Rozynski
-Clã: Toreador · Geração: 10ª · Nascido: 1926 · Abraçado: 1956 (~100 anos, aparência 30) · Senhor: Elijahu Zvi Rosenlicht
+Clã: Tremere · Geração: 10ª · Nascido: 1926 · Abraçado: 1956 (~100 anos, aparência 30) · Senhor: Elijahu Zvi Rosenlicht
 Conceito: intelectual político, altamente manipulador · Predador: Osiris (alimenta-se da própria congregação/séquito)
 Ambição: restaurar a unidade das centelhas sagradas pela beleza, memória e vontade · Desejo: fazer prevalecer a própria vontade sob a aparência de consenso
 Convicção: a criação é um mosaico de centelhas sagradas; preservá-las é o dever dos sábios · Pilar/Touchstone: Marek Zielinski
@@ -85,7 +85,7 @@ A defesa de Fryderyk. Fryderyk recoloca a insinuação como capricho frágil de 
 
 O encargo. O Príncipe não entrega o intruso à Agulha. Instrumentaliza a dupla: dá-lhes a custódia e a tarefa de descobrir quem o mandou, quantos cruzaram o rio e o que ele viu — resposta antes da próxima corte. A Harpia testemunha; o encargo vira dívida pública. O Arauto entrega o selo com um desgosto de arquivista pelas 48 horas que o prisioneiro desperdiçou.
 
-O corredor. Renata intercepta os dois sem que ninguém a veja se mover. "Foi um bom número, Toreador" — sem calor nem ironia. Oferece as "mãos discretas" do gabinete dela para o interrogatório. Anzol; interesse secreto pelos recém-chegados.
+O corredor. Renata intercepta os dois sem que ninguém a veja se mover. "Foi um bom número, Tremere" — sem calor nem ironia. Oferece as "mãos discretas" do gabinete dela para o interrogatório. Anzol; interesse secreto pelos recém-chegados.
 
 O teto de Lior. Lior escolhe o próprio Heaven: "quero saber o que me conecta a ele." Longe da corte, o prisioneiro relaxa — atravessou meio continente atrás de Lior, com alívio, gratidão e mágoa. Diz se chamar Awrum. Afirma um passado partilhado "sob as mesmas mãos", ligado a Oliver Steinberg, e se magoa porque Lior não o reconhece. Lior lembra de Oliver, mas a época lhe é imprecisa.
 
@@ -283,7 +283,7 @@ Fryderyk usou Reveal Temperament (Auspex 2) sobre a partitura impregnada pela pr
 Através do eco impregnado na tinta, Rosenlicht sentiu Fryderyk tocando a obra. O contato foi mútuo. O Compositor agora sabe que Fryderyk está em Varsóvia e tem a partitura.
 
 3. DECIFRAÇÃO CABALÍSTICA (Fryderyk)
-Fryderyk aplicou seu conhecimento de Cabala e descobriu a estrutura oculta: a partitura é uma Árvore da Vida deformada com dez sefirot, cada uma representando um clã diferente. Keter (vazia, o lugar do Mashiach), Chochmá (Ventrue), Biná (Lasombra), Chessed (Brujah), Guevurá (Gangrel), Tiferet (Toreador — o centro), Netzach (Malkavian), Hod (Tremere), Yessod (Nosferatu), Malchut (Banu Haqim). Os compassos finais — dezesseis — estão em branco, reservados para Fryderyk. A centelha de Tiferet precisa ser ofertada, não arrancada. O ritual não requer sua morte, mas sua participação voluntária. Esta é a razão pela qual a equipe Dabrowski tem ordens de capturá-lo vivo e inteiro.
+Fryderyk aplicou seu conhecimento de Cabala e descobriu a estrutura oculta: a partitura é uma Árvore da Vida deformada com dez sefirot, cada uma representando um clã diferente. Keter (vazia, o lugar do Mashiach), Chochmá (Ventrue), Biná (Lasombra), Chessed (Brujah), Guevurá (Gangrel), Tiferet (Tremere — o centro), Netzach (Malkavian), Hod (Toreador), Yessod (Nosferatu), Malchut (Banu Haqim). Os compassos finais — dezesseis — estão em branco, reservados para Fryderyk. A centelha de Tiferet precisa ser ofertada, não arrancada. O ritual não requer sua morte, mas sua participação voluntária. Esta é a razão pela qual a equipe Dabrowski tem ordens de capturá-lo vivo e inteiro.
 
 4. ESTRATÉGIA (Fryderyk)
 Fryderyk estabeleceu três perguntas para nortear a investigação: quem está desaparecendo, quem está recolhendo, e por que Varsóvia após tantas décadas. Declarou que o momento exige inteligência antes da ação. Lior concordou e assumiu a execução tática.
