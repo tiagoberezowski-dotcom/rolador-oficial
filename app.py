@@ -433,7 +433,7 @@ def upload_imagem_r2(data_url: str, pasta: str, nome: str) -> str:
 # Em produção, defina DB_PATH=/var/data/banco.db no systemd; sem a variável,
 # usa o banco.db local (desenvolvimento).
 DB_PATH = os.environ.get('DB_PATH') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'banco.db')
-BACKUP_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backup_mensagens.json')
+BACKUP_PATH = os.environ.get('BACKUP_PATH') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backup_mensagens.json')
 
 _canon_lock = threading.Lock()
 
