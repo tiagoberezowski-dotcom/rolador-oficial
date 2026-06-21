@@ -912,7 +912,7 @@ def _comprimir_historico_bg():
         msgs_api.append({"role": "user", "content": "Gere o resumo estruturado deste trecho."})
 
         response = get_client().chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek-v4-pro",
             messages=msgs_api,
             max_tokens=2000,
             temperature=0.2,
@@ -1942,7 +1942,7 @@ Cidades-exemplo a oferecer (não use como lista mecânica — integre na prosa):
     try:
         if stream:
             return get_client().chat.completions.create(
-                model="deepseek-chat",
+                model="deepseek-v4-pro",
                 messages=mensagens_api,
                 max_tokens=4000,
                 temperature=0.7,
@@ -1950,7 +1950,7 @@ Cidades-exemplo a oferecer (não use como lista mecânica — integre na prosa):
                 timeout=API_TIMEOUT
             )
         response = get_client().chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek-v4-pro",
             messages=mensagens_api,
             max_tokens=4000,
             temperature=0.7,
@@ -2916,7 +2916,7 @@ def consulta_mestre():
     def generate():
         try:
             stream = get_client().chat.completions.create(
-                model="deepseek-chat",
+                model="deepseek-v4-pro",
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": pergunta}
@@ -2993,7 +2993,7 @@ def resumo_sessao():
 
     try:
         response = get_client().chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek-v4-pro",
             messages=mensagens_api,
             max_tokens=4000,
             temperature=0.3
@@ -3023,7 +3023,7 @@ def _gerar_proposta_canon(numero_sessao, resumo):
             "- Retorne APENAS o texto completo do cânone atualizado, sem comentários nem markdown extra."
         )
         response = get_client().chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek-v4-pro",
             messages=[
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user", "content": f"=== CÂNONE ATUAL ===\n{canon_atual}\n\n=== RESUMO DA SESSÃO {numero_sessao} ===\n{resumo}"},
