@@ -14,7 +14,7 @@ Hospedado em VM própria no **Google Cloud Platform**.
 | IP externo | `146.148.51.209` |
 | Usuário | `tiagoberezowski` |
 | Código | `/home/tiagoberezowski/rolador-oficial/` |
-| Serviço | `rolador.service` (systemd + gunicorn, `--bind 127.0.0.1:5001`, 2 workers) |
+| Serviço | `rolador.service` (systemd + gunicorn, `--workers 2 --threads 8`, bind `127.0.0.1:5001`) |
 | Proxy | nginx → `proxy_pass http://127.0.0.1:5001` |
 | Domínio | `berezowski.dev` / `www.berezowski.dev` (HTTPS) |
 | Banco | SQLite em `/home/tiagoberezowski/rolador-oficial/banco.db` |
@@ -53,6 +53,24 @@ git@github.com:tiagoberezowski-dotcom/rolador-oficial.git
 > Acessar pelo **IP cru** (`146.148.51.209`) dá **404** — é esperado: o nginx
 > serve o app só no `server_name berezowski.dev`; o IP cai no `default_server`.
 > Sempre teste pelo domínio.
+
+## Configuração do servidor (systemd + .env)
+
+O unit do systemd está versionado em [`deploy/rolador.service`](deploy/rolador.service). Ao recriar a VM, copiar para `/etc/systemd/system/rolador.service` e rodar `sudo systemctl daemon-reload && sudo systemctl enable --now rolador.service`.
+
+**gunicorn usa `--workers 2 --threads 8` (worker class `gthread`).** As threads são essenciais: o endpoint `/eventos` é SSE de verdade e segura uma conexão aberta por jogador; com workers sync sem threads, 2 jogadores conectados saturavam os 2 workers e o app travava pra todos.
+
+**`.env` (NÃO versionado — gitignored) — chaves usadas pelo `app.py`:**
+
+- `SECRET_KEY` — obrigatória (sem ela o app nem sobe)
+- `SENHA_MESTRE` — senha do painel admin / reset / XP
+- `DEEPSEEK_API_KEY` — Mestre IA
+- `GROQ_API_KEY` (e opcionais `BRIEFING_API_KEY` / `BRIEFING_BASE_URL` / `BRIEFING_MODEL`) — briefing/preparador de cena (Groq/Llama); sem nenhuma chave, o briefing fica desligado
+- `GOOGLE_API_KEY` — Gemini
+- `DB_PATH` — caminho do SQLite (opcional; default é `banco.db` na pasta do projeto)
+- `R2_ACCOUNT_ID` / `R2_ACCESS_KEY` / `R2_SECRET_KEY` / `R2_BUCKET` / `R2_PUBLIC_URL` — storage de imagens no Cloudflare R2; se ausentes, avatares/capas ficam inline (base64) no banco
+
+> Como o `.env` não é levado pelo `git pull`, ao adicionar features que usam chaves novas, **atualizar o `.env` do servidor manualmente** antes de reiniciar.
 
 ## Comandos úteis no servidor
 

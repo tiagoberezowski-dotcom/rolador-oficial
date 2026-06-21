@@ -1,0 +1,14 @@
+[Unit]
+Description=Rolador Oficial
+After=network.target
+
+[Service]
+User=tiagoberezowski
+WorkingDirectory=/home/tiagoberezowski/rolador-oficial
+Environment="PATH=/home/tiagoberezowski/rolador-oficial/venv/bin"
+EnvironmentFile=/home/tiagoberezowski/rolador-oficial/.env
+ExecStart=/home/tiagoberezowski/rolador-oficial/venv/bin/gunicorn --workers 2 --threads 8 --bind 127.0.0.1:5001 app:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
