@@ -3069,28 +3069,34 @@
             const _playPromise = audio.play().catch(() => {});
             _audioAtual = { audio, player };
 
-            let token;
-            try {
-                const resp = await fetch('/tts', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({texto: textoPlano})
-                });
-                if (!resp.ok) throw new Error('erro');
-                const d = await resp.json();
-                token = d.token;
-            } catch(e) {
-                audio.pause();
-                btnPlay.classList.remove('carregando');
-                btnPlay.disabled = false;
-                btnPlay.textContent = '✗';
-                setTimeout(() => { btnPlay.textContent = '▶'; }, 3000);
-                _audioAtual = null;
-                return;
+            // Se o servidor já pré-gerou o áudio desta narração, toca a URL do R2
+            // direto (instantâneo, pros dois jogadores). Senão, gera sob demanda via /tts.
+            let audioUrl = player.dataset.audioUrl;
+            if (!audioUrl) {
+                let token;
+                try {
+                    const resp = await fetch('/tts', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({texto: textoPlano})
+                    });
+                    if (!resp.ok) throw new Error('erro');
+                    const d = await resp.json();
+                    token = d.token;
+                } catch(e) {
+                    audio.pause();
+                    btnPlay.classList.remove('carregando');
+                    btnPlay.disabled = false;
+                    btnPlay.textContent = '✗';
+                    setTimeout(() => { btnPlay.textContent = '▶'; }, 3000);
+                    _audioAtual = null;
+                    return;
+                }
+                audioUrl = '/tts/audio/' + token;
             }
 
             // Agora seta o src real — o browser já tem permissão de reprodução
-            audio.src = '/tts/audio/' + token;
+            audio.src = audioUrl;
             audio.load();
 
             // Atualiza progresso
@@ -3588,6 +3594,19 @@
                     avataresPorNPC[ev.nome] = ev.avatar;
                     atualizarAvatarNPCNoDOM(ev.nome, ev.avatar);
                     break;
+
+                case 'narracao_audio': {
+                    // Áudio da narração pré-gerado no servidor: anexa a URL ao último
+                    // player do Mestre, pros DOIS jogadores tocarem instantâneo no OUVIR.
+                    const players = document.querySelectorAll('.tts-player');
+                    const ultimo = players[players.length - 1];
+                    if (ultimo && ev.url) {
+                        ultimo.dataset.audioUrl = ev.url;
+                        const b = ultimo.querySelector('.tts-btn-stop');
+                        if (b) b.title = 'Ouvir narração (pronta)';
+                    }
+                    break;
+                }
 
                 case 'chat_limpo':
                     window.location.reload();

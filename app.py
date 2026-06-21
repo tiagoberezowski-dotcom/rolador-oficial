@@ -789,6 +789,31 @@ def obter_session_log(n=3):
     return '\n\n'.join(partes)
 
 
+_tts_pregen_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='tts-pregen')
+
+
+def _pregerar_e_broadcast_tts(texto):
+    """Gera o áudio da narração em background e faz broadcast da URL (R2) para TODOS
+    os clientes. Assim o áudio chega aos dois jogadores e, ao clicar OUVIR, toca
+    instantaneamente (sem o atraso da geração full-clip do Gemini)."""
+    if TTS_ENGINE != 'gemini':
+        return
+    try:
+        t = _preparar_texto_tts(texto)
+        if not t:
+            return
+        url = _tts_r2_url_existente(t)
+        if not url:
+            wav = _tts_gerar_gemini(t)
+            if not wav:
+                return
+            url = _tts_r2_salvar(t, wav)
+        if url:
+            broadcast({"tipo": "narracao_audio", "url": url})
+    except Exception as e:
+        app.logger.warning("pré-geração de TTS falhou: %s", str(e)[:120])
+
+
 def salvar_mensagem_db(autor, texto):
     hora = datetime.now().strftime('%Y-%m-%d %H:%M')
     with _db() as con:
@@ -798,6 +823,9 @@ def salvar_mensagem_db(autor, texto):
         )
         con.commit()
     _backup_mensagens()
+    # Pré-gera o áudio da narração do Mestre e avisa os dois jogadores (toca instantâneo).
+    if autor == "Mestre (IA)":
+        _tts_pregen_executor.submit(_pregerar_e_broadcast_tts, texto)
     return hora
 
 
@@ -884,7 +912,7 @@ def _comprimir_historico_bg():
         msgs_api.append({"role": "user", "content": "Gere o resumo estruturado deste trecho."})
 
         response = get_client().chat.completions.create(
-            model="deepseek-v4-pro",
+            model="deepseek-chat",
             messages=msgs_api,
             max_tokens=2000,
             temperature=0.2,
@@ -1914,7 +1942,7 @@ Cidades-exemplo a oferecer (não use como lista mecânica — integre na prosa):
     try:
         if stream:
             return get_client().chat.completions.create(
-                model="deepseek-v4-pro",
+                model="deepseek-chat",
                 messages=mensagens_api,
                 max_tokens=4000,
                 temperature=0.7,
@@ -1922,7 +1950,7 @@ Cidades-exemplo a oferecer (não use como lista mecânica — integre na prosa):
                 timeout=API_TIMEOUT
             )
         response = get_client().chat.completions.create(
-            model="deepseek-v4-pro",
+            model="deepseek-chat",
             messages=mensagens_api,
             max_tokens=4000,
             temperature=0.7,
@@ -2888,7 +2916,7 @@ def consulta_mestre():
     def generate():
         try:
             stream = get_client().chat.completions.create(
-                model="deepseek-v4-pro",
+                model="deepseek-chat",
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": pergunta}
@@ -2965,7 +2993,7 @@ def resumo_sessao():
 
     try:
         response = get_client().chat.completions.create(
-            model="deepseek-v4-pro",
+            model="deepseek-chat",
             messages=mensagens_api,
             max_tokens=4000,
             temperature=0.3
@@ -2995,7 +3023,7 @@ def _gerar_proposta_canon(numero_sessao, resumo):
             "- Retorne APENAS o texto completo do cânone atualizado, sem comentários nem markdown extra."
         )
         response = get_client().chat.completions.create(
-            model="deepseek-v4-pro",
+            model="deepseek-chat",
             messages=[
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user", "content": f"=== CÂNONE ATUAL ===\n{canon_atual}\n\n=== RESUMO DA SESSÃO {numero_sessao} ===\n{resumo}"},
