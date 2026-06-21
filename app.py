@@ -1226,8 +1226,9 @@ def _preparar_briefing_cena(acoes, ultimas_msgs, estado_pers, estado_mundo_raw):
 
     prompt_sistema = (
         "Você é um assistente de regras para Vampire: The Masquerade 5ª Edição. "
-        "Analise a ação dos jogadores e gere um briefing estruturado em até 120 palavras para o Narrador IA. "
-        "Seja direto e objetivo. Não narre, não interprete criativamente — apenas classifique e destaque."
+        "Gere um briefing estruturado em até 120 palavras para o Narrador IA. Seja direto, não narre. "
+        "REGRAS: (1) Em uso de Disciplina, SEMPRE aponte o teste de Rouse (1 dado) e, se for resistida, a oposição. "
+        "(2) Só inclua a linha ALERTA quando a ação AFIRMA um resultado já alcançado; se for só tentativa, OMITA a linha ALERTA."
     )
 
     prompt_usuario = f"""AÇÃO(ÕES) DO TURNO:
@@ -1246,8 +1247,8 @@ ESTADO DO MUNDO (relevante):
 Responda EXATAMENTE neste formato (omita ALERTA se não houver):
 
 TIPO: [social_ativo | social_resistido | combate | furtividade | investigação | disciplina | narrativo]
-MECÂNICA: [pool sugerido; se resistido, indique a oposição; se narrativo puro, diga isso]
-ALERTA: [se a ação pressupõe resultado sem rolagem, ex: "convenço X" → lembrar o Narrador de pedir dados primeiro]
+MECÂNICA: [pool = Atributo + Perícia; se resistido, indique a oposição; se usar Disciplina, inclua o teste de Rouse (1 dado) e a oposição quando houver; se narrativo puro, escreva "sem rolagem"]
+ALERTA: [INCLUA SOMENTE se a ação afirma um resultado como já obtido (ex.: "convenço X", "arrombo a porta", "faço-o recuar"): avise o Narrador a pedir a rolagem antes. Se for só tentativa ("tento", "ataco", "me esgueiro"), NÃO escreva esta linha.]
 CONTEXTO: [1-3 itens do estado do mundo diretamente relevantes para esta ação]"""
 
     for cliente, modelo in clientes:
