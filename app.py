@@ -3735,47 +3735,47 @@ def _tts_gerar_gemini_stream(texto: str, hash_str: str):
     req = _ur.Request(url, data=body, headers={'Content-Type': 'application/json'})
     resp = _ur.urlopen(req, timeout=15)
     
-    def _gen():
-        yield criar_wav_header_streaming()
-        pcm_chunks = []
-        try:
-            for line in resp:
-                if line.startswith(b'data: '):
-                    data_str = line[6:].decode('utf-8').strip()
-                    if data_str == '[DONE]': break
-                    if not data_str: continue
-                    try:
-                        data_json = _json.loads(data_str)
-                        part = data_json['candidates'][0]['content']['parts'][0]['inlineData']
-                        pcm = _b64.b64decode(part['data'])
-                        pcm_chunks.append(pcm)
-                        yield pcm
-                    except Exception:
-                        pass
-        except Exception as e:
-            app.logger.warning("Gemini stream error: %s", e)
-        finally:
-            resp.close()
-            if pcm_chunks:
-                full_pcm = b''.join(pcm_chunks)
-                buf = _io.BytesIO()
-                with _wave.open(buf, 'wb') as w:
-                    w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(full_pcm)
-                wav_data = buf.getvalue()
-                
-                def _upload_bg():
-                    url_r2 = _tts_r2_salvar(texto, wav_data)
-                    with _tts_generating_cond:
-                        _tts_generating.remove(hash_str)
-                        _tts_generating_cond.notify_all()
-                    if url_r2:
-                        broadcast({"tipo": "narracao_audio", "url": url_r2})
-                threading.Thread(target=_upload_bg).start()
-            else:
-                with _tts_generating_cond:
-                    if hash_str in _tts_generating: _tts_generating.remove(hash_str)
-                    _tts_generating_cond.notify_all()
-    return _gen()
+    pcm_chunks = []
+    try:
+        for line in resp:
+            if line.startswith(b'data: '):
+                data_str = line[6:].decode('utf-8').strip()
+                if data_str == '[DONE]': break
+                if not data_str: continue
+                try:
+                    data_json = _json.loads(data_str)
+                    part = data_json['candidates'][0]['content']['parts'][0]['inlineData']
+                    pcm = _b64.b64decode(part['data'])
+                    pcm_chunks.append(pcm)
+                except Exception:
+                    pass
+    except Exception as e:
+        app.logger.warning("Gemini stream error: %s", e)
+    finally:
+        resp.close()
+        
+    if pcm_chunks:
+        full_pcm = b''.join(pcm_chunks)
+        buf = _io.BytesIO()
+        with _wave.open(buf, 'wb') as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(full_pcm)
+        wav_data = buf.getvalue()
+        
+        def _upload_bg():
+            url_r2 = _tts_r2_salvar(texto, wav_data)
+            with _tts_generating_cond:
+                if hash_str in _tts_generating:
+                    _tts_generating.remove(hash_str)
+                _tts_generating_cond.notify_all()
+            if url_r2:
+                broadcast({"tipo": "narracao_audio", "url": url_r2})
+        threading.Thread(target=_upload_bg).start()
+        return wav_data
+    else:
+        with _tts_generating_cond:
+            if hash_str in _tts_generating: _tts_generating.remove(hash_str)
+            _tts_generating_cond.notify_all()
+        return None
 
 
 def _tts_r2_chave(texto: str) -> str:
@@ -3866,8 +3866,9 @@ def tts_audio(token):
                 
         try:
             if hash_str in _tts_generating:
-                gen = _tts_gerar_gemini_stream(texto, hash_str)
-                return Response(gen, mimetype='audio/wav', headers={'Cache-Control': 'no-store'})
+                wav = _tts_gerar_gemini_stream(texto, hash_str)
+                if wav:
+                    return Response(wav, mimetype='audio/wav', headers={'Cache-Control': 'no-store'})
         except Exception as e:
             app.logger.warning("Falha ao iniciar Gemini stream (%s) - caindo pro edge-tts", str(e)[:140])
             with _tts_generating_cond:
