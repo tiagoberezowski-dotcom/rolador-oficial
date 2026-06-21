@@ -1058,9 +1058,16 @@ def _get_briefing_clientes():
     if not chaves:
         chaves = _get_groq_chaves()
 
-    if not chaves:
-        return []
-    return [(OpenAI(api_key=c, base_url=base_url), modelo) for c in chaves]
+    # Primário: Groq (rápido e grátis)
+    clientes = [(OpenAI(api_key=c, base_url=base_url), modelo) for c in chaves]
+
+    # Fallback (SÓ usado se o Groq falhar): MESMO modelo Llama 3.3 70B na DigitalOcean.
+    do_key = os.environ.get('DIGITALOCEAN_AI_API_KEY', '').strip()
+    if do_key:
+        do_base = os.environ.get('DIGITALOCEAN_AI_BASE_URL', 'https://inference.do-ai.run/v1')
+        clientes.append((OpenAI(api_key=do_key, base_url=do_base), 'llama3.3-70b-instruct'))
+
+    return clientes
 
 
 def _estado_personagens():
@@ -1267,13 +1274,10 @@ CONTEXTO: [1-3 itens do estado do mundo diretamente relevantes para esta ação]
             app.logger.info("Briefing de cena pronto (%d chars): %s", len(briefing), briefing[:80])
             return briefing
         except Exception as exc:
-            erro_str = str(exc).lower()
-            if 'rate_limit' in erro_str or '429' in erro_str or '413' in erro_str:
-                app.logger.warning("Briefing: rate limit na chave atual, tentando próxima — %s", exc)
-                continue
-            app.logger.warning("Preparador de cena falhou (%s) — continuando sem briefing", exc)
-            return None
-    app.logger.warning("Briefing: todas as chaves Groq no limite — continuando sem briefing")
+            # Qualquer falha do provedor atual (429, 5xx, timeout, conexão) → tenta o próximo.
+            app.logger.warning("Briefing: provedor '%s' falhou (%s) — tentando próximo", modelo, str(exc)[:120])
+            continue
+    app.logger.warning("Briefing: todos os provedores falharam — seguindo sem briefing")
     return None
 
 
