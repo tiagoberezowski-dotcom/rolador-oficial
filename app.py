@@ -789,29 +789,37 @@ def obter_session_log(n=3):
     return '\n\n'.join(partes)
 
 
-_tts_pregen_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='tts-pregen')
+_tts_pregen_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix='tts-pregen')
 
 
 def _pregerar_e_broadcast_tts(texto):
-    """Gera o áudio da narração em background e faz broadcast da URL (R2) para TODOS
-    os clientes. Assim o áudio chega aos dois jogadores e, ao clicar OUVIR, toca
-    instantaneamente (sem o atraso da geração full-clip do Gemini)."""
     if TTS_ENGINE != 'gemini':
         return
+    import time
+    time.sleep(3) # Dá tempo pro jogador clicar em OUVIR e assumir o streaming
     try:
         t = _preparar_texto_tts(texto)
-        if not t:
-            return
+        if not t: return
+        hash_str = _tts_hash(t)
         url = _tts_r2_url_existente(t)
-        if not url:
-            wav = _tts_gerar_gemini(t)
-            if not wav:
-                return
-            url = _tts_r2_salvar(t, wav)
         if url:
             broadcast({"tipo": "narracao_audio", "url": url})
+            return
+            
+        with _tts_generating_cond:
+            if hash_str in _tts_generating: return
+            _tts_generating.add(hash_str)
+            
+        try:
+            gen = _tts_gerar_gemini_stream(t, hash_str)
+            for _ in gen: pass # Consome o stream silenciosamente para salvar no R2
+        except Exception as e:
+            with _tts_generating_cond:
+                if hash_str in _tts_generating:
+                    _tts_generating.remove(hash_str)
+                _tts_generating_cond.notify_all()
     except Exception as e:
-        app.logger.warning("pré-geração de TTS falhou: %s", str(e)[:120])
+        app.logger.warning("pré-geração stream falhou: %s", str(e)[:120])
 
 
 def salvar_mensagem_db(autor, texto):
@@ -3697,15 +3705,26 @@ def _tts_hash(texto: str) -> str:
     return hashlib.sha256(base.encode('utf-8')).hexdigest()
 
 
-def _tts_gerar_gemini(texto: str):
-    """Gera o áudio no Gemini TTS e devolve WAV (bytes). None em qualquer falha (cai pro edge-tts)."""
+_tts_generating = set()
+_tts_generating_cond = threading.Condition()
+
+def criar_wav_header_streaming(rate=24000, bits=16, channels=1):
+    import struct
+    datasize = 0xFFFFFFFF
+    riffsize = datasize + 36
+    header = b'RIFF' + struct.pack('<I', riffsize) + b'WAVE'
+    header += b'fmt ' + struct.pack('<I', 16)
+    header += struct.pack('<HHIIHH', 1, channels, rate, rate * channels * (bits // 8), channels * (bits // 8), bits)
+    header += b'data' + struct.pack('<I', datasize)
+    return header
+
+def _tts_gerar_gemini_stream(texto: str, hash_str: str):
     import json as _json, base64 as _b64, io as _io, wave as _wave
     import urllib.request as _ur
     chave = os.environ.get('GEMINI_TTS_API_KEY') or os.environ.get('GOOGLE_API_KEY', '')
-    if not chave:
-        return None
-    url = (f'https://generativelanguage.googleapis.com/v1beta/models/'
-           f'{GEMINI_TTS_MODEL}:generateContent?key={chave}')
+    if not chave: raise ValueError("Sem API KEY")
+    
+    url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TTS_MODEL}:streamGenerateContent?alt=sse&key={chave}'
     body = _json.dumps({
         "contents": [{"parts": [{"text": GEMINI_TTS_STYLE + texto}]}],
         "generationConfig": {
@@ -3714,20 +3733,49 @@ def _tts_gerar_gemini(texto: str):
         },
     }).encode('utf-8')
     req = _ur.Request(url, data=body, headers={'Content-Type': 'application/json'})
-    try:
-        with _ur.urlopen(req, timeout=60) as resp:
-            data = _json.load(resp)
-        part = data['candidates'][0]['content']['parts'][0]['inlineData']
-        pcm = _b64.b64decode(part['data'])
-        mime = part.get('mimeType', '')
-        rate = int(mime.split('rate=')[1].split(';')[0]) if 'rate=' in mime else 24000
-        buf = _io.BytesIO()
-        with _wave.open(buf, 'wb') as w:
-            w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate); w.writeframes(pcm)
-        return buf.getvalue()
-    except Exception as e:
-        app.logger.warning('TTS Gemini falhou (%s) - usando edge-tts', str(e)[:140])
-        return None
+    resp = _ur.urlopen(req, timeout=15)
+    
+    def _gen():
+        yield criar_wav_header_streaming()
+        pcm_chunks = []
+        try:
+            for line in resp:
+                if line.startswith(b'data: '):
+                    data_str = line[6:].decode('utf-8').strip()
+                    if data_str == '[DONE]': break
+                    if not data_str: continue
+                    try:
+                        data_json = _json.loads(data_str)
+                        part = data_json['candidates'][0]['content']['parts'][0]['inlineData']
+                        pcm = _b64.b64decode(part['data'])
+                        pcm_chunks.append(pcm)
+                        yield pcm
+                    except Exception:
+                        pass
+        except Exception as e:
+            app.logger.warning("Gemini stream error: %s", e)
+        finally:
+            resp.close()
+            if pcm_chunks:
+                full_pcm = b''.join(pcm_chunks)
+                buf = _io.BytesIO()
+                with _wave.open(buf, 'wb') as w:
+                    w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(full_pcm)
+                wav_data = buf.getvalue()
+                
+                def _upload_bg():
+                    url_r2 = _tts_r2_salvar(texto, wav_data)
+                    with _tts_generating_cond:
+                        _tts_generating.remove(hash_str)
+                        _tts_generating_cond.notify_all()
+                    if url_r2:
+                        broadcast({"tipo": "narracao_audio", "url": url_r2})
+                threading.Thread(target=_upload_bg).start()
+            else:
+                with _tts_generating_cond:
+                    if hash_str in _tts_generating: _tts_generating.remove(hash_str)
+                    _tts_generating_cond.notify_all()
+    return _gen()
 
 
 def _tts_r2_chave(texto: str) -> str:
@@ -3800,18 +3848,32 @@ def tts_audio(token):
     with _tts_cache_lock:
         _tts_cache.pop(token, None)
 
-    # --- Gemini TTS com cache no R2: gera 1x por texto, reusa sem cobrar de novo ---
+    # --- Gemini TTS com cache no R2 (Híbrido com Streaming SSE) ---
     if TTS_ENGINE == 'gemini':
+        hash_str = _tts_hash(texto)
         cache_url = _tts_r2_url_existente(texto)
         if cache_url:
             return redirect(cache_url)
-        wav = _tts_gerar_gemini(texto)
-        if wav:
-            url = _tts_r2_salvar(texto, wav)
-            if url:
-                return redirect(url)
-            return Response(wav, mimetype='audio/wav', headers={'Cache-Control': 'no-store'})
-        # Gemini falhou (cota/erro): cai pro edge-tts abaixo.
+            
+        with _tts_generating_cond:
+            if hash_str in _tts_generating:
+                # Alguém já está streamando. Espera terminar pra pegar do R2.
+                _tts_generating_cond.wait(timeout=30)
+                url_existente = _tts_r2_url_existente(texto)
+                if url_existente: return redirect(url_existente)
+            else:
+                _tts_generating.add(hash_str)
+                
+        try:
+            if hash_str in _tts_generating:
+                gen = _tts_gerar_gemini_stream(texto, hash_str)
+                return Response(gen, mimetype='audio/wav', headers={'Cache-Control': 'no-store'})
+        except Exception as e:
+            app.logger.warning("Falha ao iniciar Gemini stream (%s) - caindo pro edge-tts", str(e)[:140])
+            with _tts_generating_cond:
+                if hash_str in _tts_generating: _tts_generating.remove(hash_str)
+                _tts_generating_cond.notify_all()
+        # Cai pro edge-tts se o Gemini falhar na conexão inicial.
 
     # --- Fallback: edge-tts (streaming) ---
     async def _stream_gen():
