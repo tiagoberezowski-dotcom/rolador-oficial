@@ -3606,7 +3606,7 @@ _restaurar_resumos_intermediarios()
 _init_rolagens_watermark()
 
 
-EDGE_TTS_VOICE = "pt-BR-ThalitaNeural"
+EDGE_TTS_VOICE = os.environ.get('EDGE_TTS_VOICE', 'pt-BR-AntonioNeural')  # fallback Microsoft (grátis), voz masculina
 
 # Motor de TTS: 'gemini' = Gemini 3.1 TTS (voz Umbriel) com cache no R2 e fallback
 # automático pro edge-tts; 'edge' = só edge-tts. Tudo configurável por env.
