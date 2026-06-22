@@ -2231,8 +2231,12 @@ def stream_chat():
             if len(mensagens_chat) >= MAX_HISTORICO:
                 threading.Thread(target=_comprimir_historico_bg, daemon=True).start()
 
-        except Exception as e:
-            app.logger.error("Erro em stream_chat: %s", e)
+        except BaseException as e:
+            if isinstance(e, GeneratorExit):
+                app.logger.warning("Cliente desconectou durante stream_chat.")
+            else:
+                app.logger.error("Erro em stream_chat: %s", e)
+            
             # Reconstrói o parcial: fase 1 limpa (se concluiu) + bruto da fase interrompida.
             if texto1_limpo is None:
                 partes = []
@@ -2262,8 +2266,12 @@ def stream_chat():
                 with _turno_lock:
                     _resetar_turno()
                 _marcar_rolagens_processadas()
-            broadcast({"tipo": "mestre_done"})
-            yield f"data: {json.dumps({'erro': str(e)})}\n\n"
+            
+            if not isinstance(e, GeneratorExit):
+                broadcast({"tipo": "mestre_done"})
+                yield f"data: {json.dumps({'erro': str(e)})}\n\n"
+            else:
+                raise
 
     return Response(
         stream_with_context(generate()),
@@ -3743,6 +3751,7 @@ def _tts_gerar_gemini_stream(texto: str, hash_str: str):
     def _gen():
         yield criar_wav_header_streaming()
         pcm_chunks = []
+        sucesso_completo = False
         try:
             for i, pedaco in enumerate(pedacos):
                 url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TTS_MODEL}:streamGenerateContent?alt=sse&key={chave}'
@@ -3775,10 +3784,14 @@ def _tts_gerar_gemini_stream(texto: str, hash_str: str):
                 except Exception as req_e:
                     app.logger.warning("Gemini stream chunk error: %s", req_e)
                     break
-        except Exception as e:
-            app.logger.warning("Gemini stream loop error: %s", e)
+            else:
+                # O else do for executa apenas se não houve break
+                sucesso_completo = True
+        except BaseException as e:
+            if not isinstance(e, GeneratorExit):
+                app.logger.warning("Gemini stream loop error: %s", e)
         finally:
-            if pcm_chunks:
+            if pcm_chunks and sucesso_completo:
                 full_pcm = b''.join(pcm_chunks)
                 buf = _io.BytesIO()
                 with _wave.open(buf, 'wb') as w:
@@ -3866,10 +3879,6 @@ def tts_audio(token):
         with _tts_cache_lock:
             _tts_cache.pop(token, None)
         return jsonify({'erro': 'token expirado'}), 404
-
-    # Consome o token (uso único)
-    with _tts_cache_lock:
-        _tts_cache.pop(token, None)
 
     # --- Gemini TTS com cache no R2 (Híbrido com Streaming SSE) ---
     if TTS_ENGINE == 'gemini':
