@@ -3726,38 +3726,58 @@ def _tts_gerar_gemini_stream(texto: str, hash_str: str):
     chave = os.environ.get('GEMINI_TTS_API_KEY') or os.environ.get('GOOGLE_API_KEY', '')
     if not chave: raise ValueError("Sem API KEY")
     
-    url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TTS_MODEL}:streamGenerateContent?alt=sse&key={chave}'
-    body = _json.dumps({
-        "contents": [{"parts": [{"text": GEMINI_TTS_STYLE + texto}]}],
-        "generationConfig": {
-            "responseModalities": ["AUDIO"],
-            "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": GEMINI_TTS_VOICE}}},
-        },
-    }).encode('utf-8')
-    req = _ur.Request(url, data=body, headers={'Content-Type': 'application/json'})
-    resp = _ur.urlopen(req, timeout=15)
-    
+    # Divide textos muito grandes (Gemini corta após ~1.4k a 1.5k caracteres)
+    import re as _re
+    frases = _re.split(r'(?<=[.!?]) +', texto)
+    pedacos = []
+    curr = ""
+    for f in frases:
+        if len(curr) + len(f) > 800:
+            if curr: pedacos.append(curr.strip())
+            curr = f
+        else:
+            curr += " " + f if curr else f
+    if curr: pedacos.append(curr.strip())
+    if not pedacos: pedacos = [texto]
+
     def _gen():
         yield criar_wav_header_streaming()
         pcm_chunks = []
         try:
-            for line in resp:
-                if line.startswith(b'data: '):
-                    data_str = line[6:].decode('utf-8').strip()
-                    if data_str == '[DONE]': break
-                    if not data_str: continue
-                    try:
-                        data_json = _json.loads(data_str)
-                        part = data_json['candidates'][0]['content']['parts'][0]['inlineData']
-                        pcm = _b64.b64decode(part['data'])
-                        pcm_chunks.append(pcm)
-                        yield pcm
-                    except Exception:
-                        pass
+            for i, pedaco in enumerate(pedacos):
+                url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TTS_MODEL}:streamGenerateContent?alt=sse&key={chave}'
+                texto_enviar = (GEMINI_TTS_STYLE + "\n\n" + pedaco) if i == 0 else pedaco
+                body = _json.dumps({
+                    "contents": [{"parts": [{"text": texto_enviar}]}],
+                    "generationConfig": {
+                        "responseModalities": ["AUDIO"],
+                        "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": GEMINI_TTS_VOICE}}},
+                    },
+                }).encode('utf-8')
+                req = _ur.Request(url, data=body, headers={'Content-Type': 'application/json'})
+                
+                try:
+                    resp = _ur.urlopen(req, timeout=15)
+                    for line in resp:
+                        if line.startswith(b'data: '):
+                            data_str = line[6:].decode('utf-8').strip()
+                            if data_str == '[DONE]': break
+                            if not data_str: continue
+                            try:
+                                data_json = _json.loads(data_str)
+                                part = data_json['candidates'][0]['content']['parts'][0]['inlineData']
+                                pcm = _b64.b64decode(part['data'])
+                                pcm_chunks.append(pcm)
+                                yield pcm
+                            except Exception:
+                                pass
+                    resp.close()
+                except Exception as req_e:
+                    app.logger.warning("Gemini stream chunk error: %s", req_e)
+                    break
         except Exception as e:
-            app.logger.warning("Gemini stream error: %s", e)
+            app.logger.warning("Gemini stream loop error: %s", e)
         finally:
-            resp.close()
             if pcm_chunks:
                 full_pcm = b''.join(pcm_chunks)
                 buf = _io.BytesIO()
