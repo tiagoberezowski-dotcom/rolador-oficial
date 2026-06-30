@@ -1224,7 +1224,8 @@ def _preparar_briefing_cena(acoes, ultimas_msgs, estado_pers, estado_mundo_raw):
         "Você é um assistente de regras para Vampire: The Masquerade 5ª Edição. "
         "Gere um briefing estruturado em até 120 palavras para o Narrador IA. Seja direto, não narre. "
         "REGRAS: (1) Em uso de Disciplina, SEMPRE aponte o teste de Rouse (1 dado) e, se for resistida, a oposição. "
-        "(2) Só inclua a linha ALERTA quando a ação AFIRMA um resultado já alcançado; se for só tentativa, OMITA a linha ALERTA."
+        "(2) Só inclua a linha ALERTA quando a ação AFIRMA um resultado já alcançado; se for só tentativa, OMITA a linha ALERTA. "
+        "(3) Nomes de Disciplinas, Atributos e Perícias SEMPRE em inglês: Obfuscate, Dominate, Auspex, Strength, Charisma, Stealth, Persuasion etc."
     )
 
     prompt_usuario = f"""AÇÃO(ÕES) DO TURNO:
@@ -1460,6 +1461,8 @@ A cada cena relevante, se as ações (ou inações) dos personagens fizerem um p
 ## IX. MECÂNICAS DE *V5* (tensão, não planilha)
 
 Aplique as regras como tensão narrativa, jamais como planilha.
+
+**Nomenclatura obrigatória:** nomes de Disciplinas, Atributos e Perícias são sempre em **inglês**, mesmo que a narração seja em português. Exemplos corretos: *Obfuscate*, *Dominate*, *Auspex*, *Presence*, *Strength*, *Charisma*, *Stealth*, *Persuasion*. Nunca escreva "Ofuscação", "Dominação", "Força", "Furtividade" ao se referir às fichas ou mecânicas.
 
 **Rolagens:** quando o resultado for incerto *e* importar, peça uma (Atributo + Habilidade vs. Dificuldade) e **exiba sempre o cálculo** — isso constrói confiança e tensão honesta. Para ações simultâneas dos dois personagens, resolva separadamente e narre os resultados em conjunto.
 
