@@ -59,3 +59,29 @@ Primogênito Banu Haqim: Yasmina al-Rashid
 
 IV. CÂNONE DO ARCO
 (a ser construído sessão a sessão)
+
+## III. O ELENCO — CORTE DE LISBOA
+
+### Cúpula
+**Príncipe:** D. Afonso de Bragança e Lancastre | Ventrue | _D. Afonso é a personificação da autoridade antiga. Fala de forma pausada, com um_
+**Senescal:** Inês de Zayas y Sotomayor | Lasombra | _Inês é o perfeito braço direito operacional. Pragmática ao extremo, ela não tem _
+**Xerife:** Artur Pedrosa | Gangrel | _Artur é um alfa de poucas palavras. Ele trata a Camarilla como uma matilha e o P_
+**Scourge I:** Yasmin Al-Razi | Banu Haqim | _Silenciosa e metódica, Yasmin é uma caçadora paciente. Ela não sente prazer na m_
+**Scourge II:** Tomás 'Boca de Sapo' Oliveira | Nosferatu | _Tomás é inteligente e brutalmente pragmático. Ele conhece cada túnel, galeria e _
+**Harpia I:** Leonor de Almeida | Toreador | _Aparenta ser a anfitriã perfeita — sorriso caloroso, elogios na ponta da língua._
+**Harpia II:** Rafael Costa | Ventrue | _Frio, calculista e obsessivo. Rafael vê a sociedade Cainita como um grande livro_
+**Arauto:** Henrique de Sousa | Ventrue | _Seco, formal e inflexível. Henrique é a personificação da lei não-escrita, um ho_
+
+### Primogênitos
+**Primogênito Ventrue:** D. Afonso de Lancastre e Meneses | _Solene e quase sacerdotal. Vê a política como uma extensão da liturgia. Fala pau_
+**Primogênito Lasombra:** Fray Tomás de la Noche | _Calmo, grave e profundamente filosófico; encara a condição de vampiro como um mi_
+**Primogênito Gangrel:** Artur Lobo | _Solitário, direto, territorial. Despreza a politicagem da Corte e evita o Elysiu_
+**Primogênito Toreador:** Constantin Vasari | _Caloroso e afável por fora, obcecado e calculista por dentro. Vê pessoas (vivas _
+**Primogênito Malkavian:** Ezequiel Nunes | _Ezequiel alterna entre lucidez cortante e crises de hiperconexão, onde vê sinais_
+**Primogênito Banu Haqim:** Tariq al-Haqq | _Grave e circunspecto, fala em tons medidos que exigem silêncio absoluto. Tariq t_
+**Primogênito Tremere:** Mikuláš Kováč | _Mikuláš é um homem de poucas palavras e muitos cálculos. Fala como se cada sílab_
+**Primogênito Nosferatu:** O Escafandrista | _Misantropo calculista e taciturno. Fala com uma voz borbulhante e metalizada pel_
+
+*(Fichas completas com atributos, Disciplinas e pools disponíveis na tabela `npcs` do banco — consultadas automaticamente em rolagens.)*
+
+

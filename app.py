@@ -1196,6 +1196,52 @@ def _formatar_rolagens_npc_para_ia(rolagens):
 
 
 # ---------------------------------------------------------------------------
+# Lookup de NPCs do banco para o briefing
+# ---------------------------------------------------------------------------
+
+def _buscar_stats_npcs(texto_acao: str) -> str:
+    """Busca fichas de NPCs mencionados na ação por nome ou cargo.
+    Retorna bloco compacto de stats para injetar no briefing, ou string vazia."""
+    import json as _json
+    try:
+        with sqlite3.connect(DB_PATH) as con:
+            rows = con.execute("SELECT nome, clan, cargo, ficha_json FROM npcs").fetchall()
+    except Exception:
+        return ""
+
+    texto_lower = texto_acao.lower()
+    encontrados = []
+    for nome, clan, cargo, ficha_raw in rows:
+        # Match por qualquer parte do nome ou cargo (palavras com mais de 3 chars)
+        partes = (
+            [p.lower() for p in nome.split() if len(p) > 3] +
+            [p.lower() for p in cargo.split() if len(p) > 3]
+        )
+        if any(p in texto_lower for p in partes):
+            try:
+                ficha = _json.loads(ficha_raw)
+            except Exception:
+                continue
+            atr = ficha.get('atributos', {})
+            disc = ficha.get('disciplinas', [])
+            disc_str = ", ".join(f"{d['nome']} {d['nivel']}" for d in disc)
+            per = ficha.get('pericias', [])
+            per_str = ", ".join(f"{p['nome']} {p['nivel']}" for p in per[:6])
+            bloco = (
+                f"{nome} ({cargo}, {clan}): "
+                f"Str{atr.get('Strength',0)} Dex{atr.get('Dexterity',0)} Sta{atr.get('Stamina',0)} | "
+                f"Cha{atr.get('Charisma',0)} Man{atr.get('Manipulation',0)} Com{atr.get('Composure',0)} | "
+                f"Int{atr.get('Intelligence',0)} Wits{atr.get('Wits',0)} Res{atr.get('Resolve',0)} | "
+                f"Perícias: {per_str} | Disciplinas: {disc_str} | Fome: 1"
+            )
+            encontrados.append(bloco)
+
+    if not encontrados:
+        return ""
+    return "STATS DOS NPCs ENVOLVIDOS (use para calcular ROLAR_NPC):\n" + "\n".join(encontrados)
+
+
+# ---------------------------------------------------------------------------
 # Preparador de Cena — pré-processador de ações para o segundo modelo de IA
 # ---------------------------------------------------------------------------
 
@@ -1229,6 +1275,10 @@ def _preparar_briefing_cena(acoes, ultimas_msgs, estado_pers, estado_mundo_raw):
         "(3) Nomes de Disciplinas, Atributos e Perícias SEMPRE em inglês: Obfuscate, Dominate, Auspex, Strength, Charisma, Stealth, Persuasion etc."
     )
 
+    # Buscar stats de NPCs mencionados na ação
+    texto_acao_completo = ' '.join(a['texto'] for a in acoes)
+    npc_stats_block = _buscar_stats_npcs(texto_acao_completo)
+
     prompt_usuario = f"""AÇÃO(ÕES) DO TURNO:
 {acoes_txt}
 
@@ -1240,7 +1290,7 @@ ESTADO DO MUNDO (relevante):
 
 ÚLTIMAS 4 MENSAGENS DA CENA:
 {ultimas_txt}
-
+{chr(10) + npc_stats_block if npc_stats_block else ''}
 ---
 Responda EXATAMENTE neste formato (omita ALERTA se não houver; omita ROLAR_NPC se for "sem rolagem" ou se só o jogador rola):
 
@@ -1258,7 +1308,7 @@ CONTEXTO: [1-3 itens do estado do mundo diretamente relevantes para esta ação]
                     {"role": "system", "content": prompt_sistema},
                     {"role": "user", "content": prompt_usuario},
                 ],
-                max_tokens=280,
+                max_tokens=350,
                 temperature=0.1,
                 timeout=8,
             )
