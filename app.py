@@ -447,7 +447,6 @@ MENSAGEM_INICIAL = {
 }
 
 
-CANON_INICIAL = CANON_BASE  # arco anterior encerrado; novo arco parte do CANON_BASE
 
 
 CANON_BASE = """[NOVO_ARCO]
@@ -555,6 +554,8 @@ O Xerife não sabe que Dinis reporta ao Senescal. Marta está desenvolvendo leal
 - Obfuscate vs Sense the Unseen: contestado (buscador rola Wits+Auspex vs Wits+Obfuscate do oculto)
 - Alimentação abstrata: Rebanho cobre sem rolagem; Hunger 0 exige drenar até a morte
 - [X] corta qualquer cena imediatamente"""
+CANON_INICIAL = CANON_BASE
+
 
 
 def init_db():
@@ -3721,13 +3722,18 @@ def criar_wav_header_streaming(rate=24000, bits=16, channels=1):
 def _tts_gerar_gemini_stream(texto: str, hash_str: str):
     import json as _json, base64 as _b64, io as _io, wave as _wave
     import urllib.request as _ur
-    import google.auth, google.auth.transport.requests as _gtr
-    _creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-    _creds.refresh(_gtr.Request())
-    chave = _creds.token
-    GCP_PROJECT_TTS  = "agenda-auto-498817"
-    GCP_LOCATION_TTS = "us-central1"
-
+    import urllib.error as _ue
+    # Vertex AI: usa service account key JSON
+    def _get_vertex_token():
+        import google.oauth2.service_account as _sa
+        import google.auth.transport.requests as _gtr
+        KEY_FILE = '/home/tiagoberezowski/rolador-oficial/vertex-key.json'
+        creds = _sa.Credentials.from_service_account_file(
+            KEY_FILE, scopes=['https://www.googleapis.com/auth/cloud-platform']
+        )
+        creds.refresh(_gtr.Request())
+        return creds.token
+    
     # Divide textos muito grandes (Gemini corta após ~1.4k a 1.5k caracteres)
     import re as _re
     frases = _re.split(r'(?<=[.!?]) +', texto)
@@ -3765,7 +3771,17 @@ def _tts_gerar_gemini_stream(texto: str, hash_str: str):
         sucesso_completo = False
         try:
             for i, pedaco in enumerate(pedacos):
-                resp = primeiro_resp if i == 0 else _fazer_req(pedaco, i)
+                url = f'https://us-central1-aiplatform.googleapis.com/v1/projects/agenda-auto-498817/locations/us-central1/publishers/google/models/{GEMINI_TTS_MODEL}:streamGenerateContent?alt=sse'
+                texto_enviar = (GEMINI_TTS_STYLE + "\n\n" + pedaco) if i == 0 else pedaco
+                body = _json.dumps({
+                    "contents": [{"role": "user", "parts": [{"text": texto_enviar}]}],
+                    "generationConfig": {
+                        "responseModalities": ["AUDIO"],
+                        "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": GEMINI_TTS_VOICE}}},
+                    },
+                }).encode('utf-8')
+                req = _ur.Request(url, data=body, headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {_get_vertex_token()}'})
+                
                 try:
                     for line in resp:
                         if line.startswith(b'data: '):
