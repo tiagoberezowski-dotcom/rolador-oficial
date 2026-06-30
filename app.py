@@ -1308,29 +1308,64 @@ RAG_TOP_K = 3
 
 
 def _consultar_rag(texto: str) -> str | None:
-    """Consulta o Vectorize com a ação do jogador e retorna trechos de regras relevantes."""
-    try:
-        r = requests.post(
-            RAG_WORKER_URL,
-            json={"q": texto, "top_k": RAG_TOP_K},
-            timeout=4,
-        )
-        r.raise_for_status()
-        chunks = r.json().get("chunks", [])
-        relevantes = [c for c in chunks if c.get("score", 0) >= RAG_MIN_SCORE]
-        if not relevantes:
-            return None
-        linhas = ["[REGRAS VTM — CONSULTA AUTOMÁTICA]"]
-        for c in relevantes:
-            secao = c.get("section", "")
-            pagina = c.get("page")
-            trecho = c.get("text", "").strip()
-            cabecalho = f"Seção: {secao}" + (f" (pág. {pagina})" if pagina else "")
-            linhas.append(f"{cabecalho}\n{trecho}")
-        return "\n\n".join(linhas)
-    except Exception as exc:
-        app.logger.warning("RAG: falha na consulta (%s)", str(exc)[:120])
+    """Duas queries paralelas ao Vectorize: uma pela ação, outra pelas consequências de sucesso/falha.
+    Retorna chunks únicos e relevantes mesclados, ordenados por score."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    # Query 1: regras sobre a ação em si
+    q_acao = texto
+
+    # Query 2: consequências de falha da Disciplina detectada na ação
+    _DISCIPLINAS = [
+        'Dominate', 'Mesmerize', 'Compel', 'Obfuscate', 'Auspex', 'Presence',
+        'Fortitude', 'Blood Sorcery', 'Animalism', 'Protean', 'Potence', 'Celerity',
+    ]
+    _mencionadas = [d for d in _DISCIPLINAS if d.lower() in texto.lower()]
+    if _mencionadas:
+        _disc = ' '.join(_mencionadas)
+        q_consequencias = f"falha completa rolagem {_disc} vampiro não consegue usar alvo resto história"
+    else:
+        q_consequencias = f"falha completa rolagem Disciplina vampiro não consegue usar alvo novamente"
+
+    def _query(q):
+        try:
+            r = requests.post(RAG_WORKER_URL, json={"q": q, "top_k": RAG_TOP_K}, timeout=4)
+            r.raise_for_status()
+            return r.json().get("chunks", [])
+        except Exception as exc:
+            app.logger.warning("RAG: falha na query (%s)", str(exc)[:120])
+            return []
+
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        fut_acao = ex.submit(_query, q_acao)
+        fut_cons = ex.submit(_query, q_consequencias)
+        chunks_acao = fut_acao.result()
+        chunks_cons = fut_cons.result()
+
+    # Mescla dedupando por section, mantendo o maior score
+    por_secao: dict[str, dict] = {}
+    for c in chunks_acao + chunks_cons:
+        sec = c.get("section", "")
+        if sec not in por_secao or c.get("score", 0) > por_secao[sec].get("score", 0):
+            por_secao[sec] = c
+
+    relevantes = sorted(
+        [c for c in por_secao.values() if c.get("score", 0) >= RAG_MIN_SCORE],
+        key=lambda c: c.get("score", 0),
+        reverse=True,
+    )[:RAG_TOP_K * 2]  # teto de 6 chunks no total
+
+    if not relevantes:
         return None
+
+    linhas = ["[REGRAS VTM — CONSULTA AUTOMÁTICA]"]
+    for c in relevantes:
+        secao = c.get("section", "")
+        pagina = c.get("page")
+        trecho = c.get("text", "").strip()
+        cabecalho = f"Seção: {secao}" + (f" (pág. {pagina})" if pagina else "")
+        linhas.append(f"{cabecalho}\n{trecho}")
+    return "\n\n".join(linhas)
 
 
 def gerar_resposta_ia(acoes, stream=False, briefing=None, continuacao=None):
