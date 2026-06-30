@@ -1323,9 +1323,9 @@ def _consultar_rag(texto: str) -> str | None:
     _mencionadas = [d for d in _DISCIPLINAS if d.lower() in texto.lower()]
     if _mencionadas:
         _disc = ' '.join(_mencionadas)
-        q_consequencias = f"falha completa rolagem {_disc} vampiro não consegue usar alvo resto história"
+        q_consequencias = f"falha completa {_disc} vampiro não pode tentar novamente mesmo alvo"
     else:
-        q_consequencias = f"falha completa rolagem Disciplina vampiro não consegue usar alvo novamente"
+        q_consequencias = f"falha completa Disciplina vampiro não pode tentar novamente mesmo alvo"
 
     def _query(q):
         try:
