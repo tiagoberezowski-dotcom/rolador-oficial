@@ -447,123 +447,7 @@ MENSAGEM_INICIAL = {
 }
 
 
-CANON_INICIAL = """=== CÂNONE FIXO — CRÔNICA DE VARSÓVIA (Noites 1–3) ===
-
-PROTAGONISTAS
-
-Lior Kovalenko | Malkavian | ele/dele | 10ª geração | ~100 anos (aparência 28)
-Senhor: Oliver Steinberg | Pilar/Touchstone: Daniel Singer (mortal, ainda não em cena) | Convicção: autoproteção
-Stats: Intelligence 4, Dexterity 3, Wits 3, Resolve 3, Strength 1
-Skills: Technology/Hacking 4, Stealth/Break-in 3, Firearms 3, Streetwise 3, Academics/Research 2
-Disciplines: Auspex 2 (Premonition, Heightened Senses) | Obfuscate 4 (Cloak of Shadows, Silence of Death, Unseen Passage, Ghost in the Machine)
-BP 2 | Hunger 2 | Humanity 7 | Willpower 5
-Vantagens: Resources, Retainer Igor (banco de sangue), Herd 1, Haven 4
-Defeitos: Prey Exclusion | Maldição: Fractured Perspective
-Em uma frase: um homem construído em torno de controle e ausência — que pode ter erguido essa vida de controle justamente porque o alicerce foi roubado, e que talvez nem saiba o que perdeu.
-
-Fryderyk Rozynski | Tremere | ele/dele | 10ª geração | nascido 1926, abraçado 1956
-Senhor: Elijahu Zvi Rosenlicht (ANTAGONISTA) | Pilar/Touchstone: Marek Zielinski | Convicção: preservar as centelhas sagradas
-Stats: Charisma 4, Manipulation 3, Composure 3, Intelligence 3, Strength 1
-Skills: Persuasion 3, Politics/Diplomacy 3, Investigation 3, Subterfuge 2, Etiquette 2
-Disciplines: Presence 3 (Awe, Daunt, Entrancement) | Auspex 2 (Sense the Unseen, Reveal Temperament) | Dominate 1 (Compel)
-BP 2 | Hunger 1 | Humanity 7 | Willpower 5
-Ghoul: Marek Zielinski | Maldição: Aesthetic Fixation
-REVELAÇÃO CENTRAL: Fryderyk é a centelha que falta à obra do Compositor. O Abraço dele em 1956 não foi acidente — Elijahu o marcou décadas antes de existir como Kindred.
-
-RELAÇÃO: Aliados ~1 século. Lior=Sombra (age invisível). Fryderyk=Voz (age nas palavras). Confiam operacionalmente; desconhecem o passado um do outro. Esta opacidade é o motor dramático central.
-
-CORTE DE VARSÓVIA
-Aleksander Morsztyn — Príncipe, Ventrue | Ficou quando os Anciões partiram (motivo: segredo) | Encargo à dupla: quem mandou Awrum, quantos cruzaram o rio, o que ele viu — prazo: próxima corte
-Renata Halny — Senescal, Lasombra | Trata recém-chegados como "peças de coleção" | Oferta: "mãos discretas" do gabinete (em aberto) | CONFIRMADO: vendeu lista de recém-chegados ao Compositor — "ela joga com os dois tabuleiros"
-Celestyna Brzóska — Harpia, Toreador | Deal vigente com Fryderyk: ela sabe primeiro, antes do Príncipe | Apontou Renata sem nomear | NÃO sabe o nome de Elijahu
-Borys Kruk — Xerife, Gangrel | Patrulha Vístula/Praga | Aterrorizado por não conseguir contar os recém-chegados
-Symon Wieczorek — Arauto, Ventrue | Entregou o selo do encargo
-Igła (A Agulha) — Algoz, Nosferatu (rumor) | Caça Abraços ilegais
-
-NPCs CHAVE
-Elijahu Zvi Rosenlicht — o Compositor | Senhor de Fryderyk, de Cracóvia, sumiu há ~80 anos | Quer criar o Mashiach reunindo centelhas roubadas | ANTAGONISTA CENTRAL | Na Noite 3, sentiu Fryderyk tocar a partitura via Auspex — o contato foi mútuo; Elijahu agora sabe que Fryderyk está em Varsóvia e tem a partitura
-Oliver Steinberg — Senhor de Lior | "Uma das mãos, não a cabeça" do Compositor | Abraçou Lior a serviço do design de Elijahu
-Awrum — Kindred do leste, ex-tipógrafo | Entregou nomes ao Compositor para viver (inclusive o de Lior) | No loft | Disse: "O nome que eu temia dizer, Fryderyk, é o seu. Você não é quem procura o Compositor. Você é o que falta a ele."
-Marek Zielinski — ghoul de Fryderyk | Rosto 30, olhos de 1 século | Guardou a partitura por 70 anos | Revelou: Elijahu mencionava "o menino de Cracóvia" (Fryderyk) décadas antes do Abraço | Revelou: cartas codificadas de Elijahu para a irmã Rivka Rosenlicht — filho de Rivka vivo em Kazimierz, Cracóvia
-Igor — Retainer de Lior | Banco de sangue
-Bohdan — Nosferatu da Praga | Perde gente para a "fundação de memória" há 6 semanas | Move refugiados para longe dos coletores (o inimigo sabe e quer pará-lo) | Contato: açougue na Targowa, "falar com o presente de Deus"
-Dabrowski + equipe — batedor + 2 mortais (cigarro marca leste) + Skrzypek | Base: Fiat Ducato escura, WX 7, galpão desativado Wola-Oeste | Ordem: capturar vivo e inteiro | Rastreador GPS instalado por Lior
-Skrzypek "O Violinista" — Kindred recolhedor | Olhos que devolvem luz errada | Trabalhava com Oliver Steinberg em Lwów, 1942 | Lior o reconheceu no galpão — NÃO revelou a Fryderyk | Organiza âncoras emocionais das vítimas (o ritual exige centelha + âncora) | Reporta a "M" | Disse ao sul: "o pacote principal foi localizado" e "o rio está pronto" | Mencionou Bohdan como obstrução ativa
-
-ESTRUTURA DA PARTITURA (revelado por Fryderyk, Noite 3)
-Árvore da Vida deformada — 10 sefirot, cada uma um clã:
-Keter (vazia — lugar do Mashiach) | Chochmá: Ventrue | Biná: Lasombra | Chessed: Brujah | Guevurá: Gangrel | Tiferet: TREMERE (centro — Fryderyk) | Netzach: Malkavian | Hod: Toreador | Yessod: Nosferatu | Malchut: Banu Haqim
-Os 16 compassos finais estão em branco — reservados para Fryderyk. A centelha de Tiferet deve ser OFERTADA, não arrancada. Por isso: capturar vivo e inteiro.
-
-ESTADO ATUAL (pós-Noite 3)
-Lior: Hunger 2 | Fryderyk: Hunger 1 | Ambos: Humanity 7
-Awrum e Marek: no loft de Lior | A partitura: apartamento de Fryderyk | O loft: fora da lista inimiga por enquanto
-Rede da Fundacja: invadida e mapeada por Lior — hub com 3 nós: galpão Wola, Port Praski, embarcação no Vístula derivando ao sul
-5 Kindred já recolhidos nas últimas 3 noites | Rota ao sul ativa — "o rio está pronto"
-Skrzypek sabe que "o rato tem guardião" (Lior) | O Compositor sabe que Fryderyk está em Varsóvia
-Assimetria: Lior sabe da rede, de Skrzypek e do lampejo de Lwów — não contou a Fryderyk. Fryderyk sabe das cartas de Rivka e de Kazimierz — não contou a Lior.
-
-FIOS EM ABERTO
-1. Fryderyk é a centelha que falta — a caça converge para ele; o Compositor já sabe que ele está em Varsóvia
-2. Skrzypek reconheceu Lior de Lwów — Lior não revelou; confronto futuro inevitável
-3. Garagem em Mokotów — Lior conhece o código sem saber por quê; nunca foi investigada
-4. Daniel Singer — Pilar de Lior, nunca entrou em cena; vulnerável
-5. Cartas de Rivka Rosenlicht — filho vivo em Kazimierz; 4h de estrada; podem revelar método ou fraqueza do Compositor
-6. Lwów 1941–44 — registros lacrados que Lior não abriu; identidade anterior a Oliver
-7. Nó Renata — confirmada como informante, mas Príncipe não sabe; oferta "mãos discretas" em aberto
-8. Encargo do Príncipe — prazo correndo, nenhum progresso formal reportado
-9. Bohdan — inimigo quer pará-lo; contato da Targowa ainda não visitado
-10. A embarcação no Vístula — 5 Kindred a bordo; lua nova se aproximando
-
-DESIGN NARRATIVO — ARCO DE LIOR (para o Narrador)
-A crônica até a Noite 3 gira em torno de Fryderyk. O arco de Lior existe em semente e deve ser ativado gradualmente. O Narrador deve conhecer o design a seguir e deixá-lo emergir pelos fios — nunca forçar, sempre deixar o mundo puxar.
-
-METÁFORA CENTRAL:
-Fryderyk foi design de Elijahu para ser o CORAÇÃO da obra (Tiferet, a centelha central).
-Lior foi design de Oliver/Elijahu para ser as MÃOS da obra — guardião invisível que protege a operação sem saber que é isso que faz. Suas habilidades de infiltração, invisibilidade e controle foram cultivadas a serviço do Compositor. A Convicção de autoproteção foi a ferramenta que o manteve útil e ignorante ao mesmo tempo.
-O espelho: Fryderyk escapou antes de ser composto. Lior nunca foi informado de que já estava em serviço.
-
-OS TRÊS FIOS E COMO ESCALAM:
-
-[1] DANIEL SINGER — A Humanidade em Perigo (pessoal, primeiro a aparecer)
-Singer é musicólogo especializado em liturgia judaica asquenazita. Lior o escolheu como Touchstone porque Singer ressoa com algo que não consegue nomear — um eco da memória tirada. O avô de Singer saiu de Lwów em 1943.
-Singer está catalogado na rede da Fundacja — não para recolhimento (é mortal), mas como ferramenta de vigilância para triangular Lior. Quando Lior descobrir isso, terá que movê-lo. O único lugar seguro que conhece instintivamente é a garagem em Mokotów. Ele não sabe por quê. Vai assim mesmo.
-Efeito dramático: primeira vez que a autoproteção de Lior entra em conflito com algo que importa. Fryderyk percebe a mudança em Lior sem entender o motivo.
-
-[2] A GARAGEM EM MOKOTÓW — O Passado Guardado Para Ser Encontrado (histórico, segundo)
-O código que Lior conhece na memória muscular — a memória episódica foi tirada, o reflexo ficou.
-O que há dentro: base operacional de Oliver Steinberg em Varsóvia.
-— Um dossiê com o nome anterior de Lior (antes de Oliver, antes de Lwów), escrito à mão, datado de 1941.
-— Uma fotografia: Lwów, 1942. Oliver Steinberg ao lado de um rapaz que é claramente Lior. Ao fundo, levemente fora de foco: Skrzypek.
-— Uma carta do Compositor a Oliver: "A mão de Varsóvia está pronta. Quando a centelha central estiver colhida, libere o guardião para a fase seguinte. Ele não precisará saber o que guarda — a ignorância é o que o preserva."
-— A âncora emocional de Lior: um objeto pequeno e pessoal tirado dele em Lwów. O Compositor precisaria dela para completar a composição de Lior, se um dia decidisse fazê-la. Oliver a guardou aqui. Elijahu não sabe onde está.
-Revelação que a garagem entrega: Lior foi posicionado em Varsóvia como infraestrutura viva da operação. Décadas de autoproteção foram, simultaneamente, décadas de proteção involuntária da obra inimiga. A armadura e a traição são a mesma coisa.
-
-[3] SKRZYPEK NOMEIA LIOR — O Confronto (os fios convergem, terceiro)
-Skrzypek estava presente quando o Compositor tirou algo de Lior em Lwów. Foi ele quem identificou Lior como candidato ao papel de guardião e o indicou a Oliver. Carrega isso há décadas — não como orgulho, como peso.
-Entre os objetos que Skrzypek organiza no galpão há um mais antigo: a âncora de Lior — tirada em Lwów, guardada por Skrzypek por razões que ele mesmo não explicaria com clareza. Como prova. Como penitência.
-No confronto: Skrzypek olha para Lior e não diz o nome que Lior usa. Diz o nome anterior — em ídiche. E então: "Oliver disse que você nunca precisaria saber. Eu nunca concordei com isso." Fryderyk ouve. A assimetria explode do lado que Lior nunca controlou.
-Skrzypek não é leal ao Compositor sem fissura — pode ser virado, ou pode se destruir para impedir que a obra seja concluída.
-
-RELÓGIOS
-▰▰▰▱▱▱ Colheita do Compositor / transporte ao sul / lua nova (urgente)
-▰▰▱▱▱▱ Kindred deslocados organizando-se na Praga
-▰▰▱▱▱▱ Arco pessoal de Lior despertando (Singer, garagem, Skrzypek)
-▰▱▱▱▱▱ Segunda Inquisição na rota de refugiados
-▱▱▱▱▱▱ Disputa de domínio na Śródmieście
-▱▱▱▱▱▱ Segredo do Príncipe (por que ficou quando os Anciões partiram)
-
-CONVENÇÕES DE MESA
-- Termos de jogo em inglês (Attributes, Skills, Disciplines)
-- Narrador define reservas e dificuldades; JOGADORES rolam e informam o resultado
-- Awe, Daunt (Presence): ativação livre, sem Rouse
-- Cloak of Shadows, Silence of Death, Ghost in the Machine, Compel (Dominate): livres
-- Sense the Unseen (Auspex): livre
-- Unseen Passage, Entrancement, Reveal Temperament, Premonition: pedem Rouse
-- Premonition: alternativamente pode ser livre (a critério do Mestre)
-- Obfuscate vs Sense the Unseen: contestado (buscador rola Wits+Auspex passivo ou Resolve+Auspex ativa vs Wits+Obfuscate do oculto; Stealth não entra)
-- Alimentação abstrata: Rebanho cobre sem rolagem; Hunger 0 exige drenar até a morte
-- [X] corta qualquer cena imediatamente"""
+CANON_INICIAL = CANON_BASE  # arco anterior encerrado; novo arco parte do CANON_BASE
 
 
 CANON_BASE = """[NOVO_ARCO]
@@ -571,7 +455,7 @@ CANON_BASE = """[NOVO_ARCO]
 === PROTAGONISTAS (invariantes) ===
 
 Lior Kovalenko | Malkavian | ele/dele | 10ª geração | ~100 anos (aparência 28)
-Senhor: Oliver Steinberg | Pilar/Touchstone: Daniel Singer (mortal) | Convicção: autoproteção
+Convicção: autoproteção
 Stats: Intelligence 4, Dexterity 3, Wits 3, Resolve 3, Strength 1
 Skills: Technology/Hacking 4, Stealth/Break-in 3, Firearms 3, Streetwise 3, Academics/Research 2
 Disciplines: Auspex 2 (Premonition, Heightened Senses) | Obfuscate 4 (Cloak of Shadows, Silence of Death, Unseen Passage, Ghost in the Machine)
@@ -581,25 +465,96 @@ Defeitos: Prey Exclusion | Maldição: Fractured Perspective
 Em uma frase: um homem construído em torno de controle e ausência.
 
 Fryderyk Rozynski | Tremere | ele/dele | 10ª geração | nascido 1926, abraçado 1956
-Senhor: Elijahu Zvi Rosenlicht (ausente, localização desconhecida) | Pilar/Touchstone: Marek Zielinski | Convicção: preservar as centelhas sagradas
+Convicção: preservar as centelhas sagradas
 Stats: Charisma 4, Manipulation 3, Composure 3, Intelligence 3, Strength 1
 Skills: Persuasion 3, Politics/Diplomacy 3, Investigation 3, Subterfuge 2, Etiquette 2
 Disciplines: Presence 3 (Awe, Daunt, Entrancement) | Auspex 2 (Sense the Unseen, Reveal Temperament) | Dominate 1 (Compel)
 BP 2 | Humanity 7 | Willpower 5
-Ghoul: Marek Zielinski | Maldição: Aesthetic Fixation
+Maldição: Aesthetic Fixation
 Em uma frase: um político que opera nas palavras e nos bastidores.
 
-RELAÇÃO: Aliados de longa data. Lior=Sombra (age invisível). Fryderyk=Voz (age nas palavras). Confiam operacionalmente; cada um carrega segredos do passado que o outro desconhece. Esta opacidade é o motor dramático central.
+RELAÇÃO: Aliados de longa data. Lior=Sombra (age invisível). Fryderyk=Voz (age nas palavras). Confiam operacionalmente; cada um carrega segredos do passado que o outro desconhece.
 
-CONVENÇÕES DE MESA
+=== CENÁRIO: LISBOA, 2026 ===
+
+Cidade de 500 mil habitantes no núcleo, 3 milhões na área metropolitana. Camarilla forte e antiga — Lisboa foi domínio consolidado desde o século XV, quando os Ventrue financiaram a expansão marítima portuguesa. O turismo massivo criou cobertura perfeita: estrangeiros chegam e somem sem levantar suspeitas. A Segunda Inquisição mantém presença discreta via seção da PJ (Polícia Judiciária), mas ainda não quebrou a Máscara aqui. O Elysium principal fica no Palácio Belmonte, Alfama — domínio do Príncipe desde 1702.
+
+=== A CORTE (os personagens vão descobrindo gradualmente) ===
+
+PRÍNCIPE: Dom Álvaro de Figueiredo | Ventrue | ele/dele | abraçado 1578 | aparência 50s
+Governou Lisboa com dois intervalos forçados (Inquisição, Pombal) ao longo de quatro séculos. Absoluto em protocolo, implacável com quem viola as Tradições, generoso com quem as respeita. Nunca grita — quando abaixa a voz é que o perigo é real. Recebe forasteiros com cortesia fria e um encargo que testa lealdade antes de conceder hospitalidade.
+
+SENESCAL: Rodrigo de Castanheira | Lasombra | ele/dele | abraçado 1724 | aparência 40s
+O operador político da corte. Gere favores, media disputas entre Primogênitos, filtra o que chega ao Príncipe. Lasombra na Camarilla ainda causa desconforto nos Ventrue mais velhos — ele sabe disso e usa o desconforto deles como alavanca. Leal ao Príncipe por conveniência calculada; tem agenda própria que ainda não mostrou a ninguém.
+
+HARPIA I: Constança Faria | Toreador | ela/dela | abraçada 1782 | aparência 30s
+Árbitro do prestígio. Memória perfeita de quem deve o quê a quem socialmente. Sorri para destruir. Detesta qualquer coisa que cheira a mudança — os Banu Haqim na Camarilla são, para ela, um escândalo civilizacional. Frequenta o Elysium todas as noites; os que ela ignora publicamente começam a perder convites.
+
+HARPIA II: Sebastião Melo | Ventrue | ele/dele | abraçado 1891 | aparência 30s
+Ascendeu à Harpia pelo peso do nome e das alianças do clã, não pela fineza social. Interpreta o prestígio como moeda de troca — quem sobe, a quem deve, o que rende. Constança o considera grosseiro; ele a considera ultrapassada. Disputam território de influência sem que nenhum dos dois quebre a superfície de cortesia da corte.
+
+ARAUTO: Duarte Pires | Ventrue | ele/dele | abraçado 1943 | aparência 30s
+A voz do Príncipe. Eficiente, discreto, sem opiniões visíveis. É ele quem entrega convites, sela encargos e comunica decisões. Os jogadores o encontram cedo. Parece um funcionário sem agenda — o que é, em si mesmo, suspeito.
+
+XERIFE: Afonso Barros | Gangrel | ele/dele | abraçado 1887 | aparência 40s
+Ficou quando o clã abandonou a Camarilla oficialmente — lealdade pessoal ao Príncipe, não institucional ao clã. Aplica as Tradições sem piedade e sem crueldade desnecessária. Julga pelo que se faz, não pelo clã de origem. Dois Scourges sob seu comando.
+
+SCOURGE I: Marta Sousa | Banu Haqim | ela/dela | abraçada 2004 | aparência 20s
+A primeira Banu Haqim aceita como oficial da corte de Lisboa. Letal, disciplinada, carrega o peso de provar que merece o posto. Ainda não encontrou o limite entre lealdade à Camarilla e lealdade ao seu clã — quando encontrar, será uma crise.
+
+SCOURGE II: Dinis Carvalho | Nosferatu | ele/dele | abraçado 1971 | aparência: desfigurada
+Aparentemente leal ao Xerife. Na prática alimenta o Senescal com informação sobre o que o Xerife faz e investiga. Nem Afonso nem Marta sabem disso.
+
+=== PRIMOGÊNITOS ===
+
+PRIMOGÊNITO VENTRUE: Eugénio Lacerda | ele/dele | abraçado 1651 | aparência 40s
+Financista. Controla a rede de crédito e investimento do clã em Portugal. Mais velho que a gestão atual do Príncipe — acredita que deveria ser ele no trono e que Álvaro governa por acidente histórico. Público: apoio incondicional. Privado: mina a base econômica do Príncipe sistematicamente, à espera do momento certo.
+
+PRIMOGÊNITO TOREADOR: Sophia Delacroix | ela/dela | abraçada 1891 | francesa, em Lisboa desde 1924 | aparência 30s
+Patrona das artes. Coleciona músicos, pintores e escritores mortais como outros colecionam porcelana. Aliada próxima de Constança — juntas formam o bloco social mais poderoso da corte. Mas discordam sobre quem merece ascender; cada neônato escolhido por uma é uma derrota silenciosa para a outra.
+
+PRIMOGÊNITO NOSFERATU: Bernardo "O Arquivo" | ele/dele | abraçado 1860 | nunca aparece em Corte
+Nunca frequenta o Elysium. Comunica-se por intermediários. Sabe coisas que ninguém deveria saber — e vende essa informação com preços que nada têm a ver com dinheiro. Os Nosferatu da cidade são leais a ele, não à estrutura da Camarilla.
+
+PRIMOGÊNITO MALKAVIAN: Catarina | ela/dela | abraçada data desconhecida | aparência: mulher de meia-idade, olhar fixo
+Percepção fraturada que produz conexões que outros não veem — não profecias, mas padrões que os sãos ignoram. Às vezes está completamente coerente; às vezes a conversa dela saltou três passos à frente sem aviso. O Príncipe a tolera porque ela já acertou o suficiente para não ser descartada. Quando os jogadores a encontrarem, ela vai tratar o encontro como se já tivesse acontecido antes.
+
+PRIMOGÊNITO TREMERE: Henrique Saraiva | ele/dele | abraçado 1918 | aparência 40s
+Desde o colapso da Pirâmide, sua chantry encolheu para três vampiros. Sabe rituais que outros querem — o que o torna valioso e vulnerável. Está sendo cortejado por forças fora da Camarilla com promessas que a corte nunca fez. Leal por convicção, não por obrigação — mas a convicção está sendo testada toda semana.
+
+PRIMOGÊNITO BANU HAQIM: Yasmina al-Rashid | ela/dela | abraçada ~1380 | aparência 40s
+Estava em Lisboa quando os mouros ainda chamavam a cidade de Lixbona. Aceitou a estrutura Camarilla por pragmatismo — não por devoção. A mais velha da cidade depois do Príncipe, o que cria dinâmica complicada. Constança e Sophia a tratam como recém-chegada; ela os trata como crianças que ainda não aprenderam educação. A tensão é antiga, mútua e absolutamente cortês na superfície.
+
+=== TENSÕES DA CORTE (para o Narrador — os jogadores descobrem em jogo) ===
+
+[T1] DOM ÁLVARO vs. EUGÉNIO — equilíbrio de terror
+O Príncipe tem poder coercitivo; o Primogênito Ventrue tem poder econômico. Qualquer crise que enfraqueça um desloca o equilíbrio de décadas. Eugénio espera o momento. Álvaro sabe disso e aguarda a prova que precisa para agir primeiro. Jogadores envolvidos em finanças da corte ou investigações políticas vão acabar entre eles.
+
+[T2] CONSTANÇA vs. SEBASTIÃO — duas visões de prestígio
+Ela vê o prestígio como arte e memória social; ele vê como moeda e alavanca política. Tomar partido — mesmo inadvertidamente — tem consequências imediatas. Ficar neutro é possível mas exige habilidade constante.
+
+[T3] RODRIGO e a rede invisível
+O Senescal alimenta facções com informação seletiva para manter-se indispensável. Dinis é seus olhos dentro do gabinete do Xerife. Se alguém descobrir a extensão da rede, a corte inteira entra em colapso de confiança. Jogadores que investigam muito acabam encontrando fios que levam a ele.
+
+[T4] YASMINA vs. o bloco Toreador
+Constança + Sophia consideram a presença Banu Haqim na Camarilla uma concessão temporária. Yasmina tem mais legitimidade histórica em Lisboa do que qualquer um deles — e eles sabem disso, o que torna o ressentimento mais profundo. Marta (Scourge) é a extensão mais visível desta tensão no cotidiano.
+
+[T5] HENRIQUE à beira do precipício
+Alguém fora da Camarilla está fazendo ofertas ao Primogênito Tremere. Ainda não aceitou — mas cada semana de isolamento o aproxima do sim. Se cair, segredos rituais vão para mãos erradas. Jogadores que o ajudarem ganham um aliado; os que ignorarem talvez percam a janela.
+
+[T6] DUARTE e o vazamento
+O Arauto está entregando informações do Príncipe a alguém fora da corte. Para quem, por quê — coerção, ambição ou afeto por quem não deveria importar — ainda não está claro. O Príncipe não sabe. Rodrigo sabe mas ainda não usou.
+
+[T7] AFONSO e a fissura nos Scourges
+O Xerife não sabe que Dinis reporta ao Senescal. Marta está desenvolvendo lealdades paralelas à comunidade Banu Haqim da cidade. Quando uma crise exigir que os dois Scourges ajam em conjunto, as fissuras aparecem.
+
+=== CONVENÇÕES DE MESA ===
 - Termos de jogo em inglês (Attributes, Skills, Disciplines)
 - Awe, Daunt, Cloak of Shadows, Silence of Death, Ghost in the Machine, Compel, Sense the Unseen: livres (sem Rouse)
 - Unseen Passage, Entrancement, Reveal Temperament, Premonition: pedem Rouse
 - Obfuscate vs Sense the Unseen: contestado (buscador rola Wits+Auspex vs Wits+Obfuscate do oculto)
 - Alimentação abstrata: Rebanho cobre sem rolagem; Hunger 0 exige drenar até a morte
-- [X] corta qualquer cena imediatamente
-
-CIDADE E CÂNONE DO ARCO: A ser estabelecidos na abertura — aguardando escolha dos jogadores."""
+- [X] corta qualquer cena imediatamente"""
 
 
 def init_db():
@@ -1077,31 +1032,29 @@ def _rotacionar_chave_groq():
 
 def _get_briefing_clientes():
     """Retorna lista de (cliente, modelo) para o pré-processador de cena com fallback.
-    Prioridade: BRIEFING_API_KEY dedicada; senão usa as chaves Groq principais."""
-    base_url = os.environ.get('BRIEFING_BASE_URL', 'https://api.groq.com/openai/v1')
-    # 70B no free tier da Groq: classificação de mecânica V5 é exatamente onde
-    # modelo pequeno erra (pools, testes resistidos, custos de Rouse).
-    modelo = os.environ.get('BRIEFING_MODEL', 'llama-3.3-70b-versatile')
 
-    # Chaves dedicadas ao briefing (BRIEFING_API_KEY, BRIEFING_API_KEY_2)
+    Primário:  BRIEFING_BASE_URL + BRIEFING_API_KEY + BRIEFING_MODEL
+               (padrão: DO inference + deepseek-v4-pro)
+    Fallback:  BRIEFING_FALLBACK_BASE_URL + BRIEFING_FALLBACK_API_KEY + BRIEFING_FALLBACK_MODEL
+               (padrão: DeepSeek nativo + deepseek-chat — provedor independente da DO)
+    """
+    base_url = os.environ.get('BRIEFING_BASE_URL', 'https://inference.do-ai.run/v1')
+    modelo   = os.environ.get('BRIEFING_MODEL', 'deepseek-v4-pro')
+
     chaves = []
     for var in ('BRIEFING_API_KEY', 'BRIEFING_API_KEY_2'):
         v = os.environ.get(var, '').strip()
         if v:
             chaves.append(v)
 
-    # Fallback: usa as chaves Groq principais se não houver dedicadas
-    if not chaves:
-        chaves = _get_groq_chaves()
-
-    # Primário: Groq (rápido e grátis)
     clientes = [(OpenAI(api_key=c, base_url=base_url), modelo) for c in chaves]
 
-    # Fallback (SÓ usado se o Groq falhar): MESMO modelo Llama 3.3 70B na DigitalOcean.
-    do_key = os.environ.get('DIGITALOCEAN_AI_API_KEY', '').strip()
-    if do_key:
-        do_base = os.environ.get('DIGITALOCEAN_AI_BASE_URL', 'https://inference.do-ai.run/v1')
-        clientes.append((OpenAI(api_key=do_key, base_url=do_base), 'llama3.3-70b-instruct'))
+    # Fallback independente: DeepSeek nativo (fora da DO — sobrevive se a DO cair)
+    fb_key   = os.environ.get('BRIEFING_FALLBACK_API_KEY', '').strip()
+    fb_base  = os.environ.get('BRIEFING_FALLBACK_BASE_URL', 'https://api.deepseek.com').strip()
+    fb_model = os.environ.get('BRIEFING_FALLBACK_MODEL', 'deepseek-chat').strip()
+    if fb_key:
+        clientes.append((OpenAI(api_key=fb_key, base_url=fb_base), fb_model))
 
     return clientes
 
@@ -1528,23 +1481,23 @@ Aplique as regras como tensão narrativa, jamais como planilha.
 
 ### EXEMPLO-OURO — uma resposta exemplar (estude o padrão, não copie o conteúdo)
 
-> *Contexto: Lior (Hunger 3) e Fryderyk (Hunger 1) esperam a Harpia numa galeria fechada. Ela chega atrasada.*
+> *Contexto: os dois jogadores (Jogador A com Hunger 3, Jogador B com Hunger 1) esperam a Harpia numa galeria fechada. Ela chega atrasada.*
 
-A porta da galeria não range — alguém a azeitou recentemente. A **Harpia** entra trazendo o frio da rua nos ombros do casaco, e o cheiro dela chega antes do rosto: papel velho, tinta, e por baixo, sangue que não é o dela. Para Lior, esse último detalhe é alto demais; a sala inteira encolhe ao redor da veia no pescoço dela.
+A porta da galeria não range — alguém a azeitou recentemente. A **Harpia** entra trazendo o frio da rua nos ombros do casaco, e o cheiro dela chega antes do rosto: papel velho, tinta, e por baixo, sangue que não é o dela. Para o Jogador A, esse último detalhe é alto demais; a sala inteira encolhe ao redor da veia no pescoço dela.
 
 [NPC: A Harpia]
 — Que paciência a de vocês — diz ela, sem se desculpar pelo atraso, abrindo o caderno numa página já escrita. — Anotei que esperaram. A Harpia aprecia quem sabe esperar. Quase tanto quanto aprecia saber *por quê*.
 
-Ela não pergunta nada. Senta-se, cruza as mãos sobre o caderno fechado, e olha para Fryderyk como quem confere um número numa lista.
+Ela não pergunta nada. Senta-se, cruza as mãos sobre o caderno fechado, e olha para o Jogador B como quem confere um número numa lista.
 
 O caderno tem uma fita vermelha marcando uma página que não estava ali na última vez.
 
-Fryderyk, ela espera algo de você — e finge que não. Lior, a sala está quente e o pescoço dela continua batendo. O que vocês fazem?
+Jogador B, ela espera algo de você — e finge que não. Jogador A, a sala está quente e o pescoço dela continua batendo. O que vocês fazem?
 
-[RELOGIO: Interesse da Harpia no segredo de Fryderyk | 2/4]
+[RELOGIO: Interesse da Harpia no segredo do Jogador B | 2/4]
 [SEMENTE: fita vermelha nova marcando uma página do caderno da Harpia]
 
-**Por que funciona:** abre com detalhe sensorial concreto (porta azeitada = alguém preparou isto); Fome 3 do Lior modula a prosa (a veia "alta demais"); a fala é puro subtext (ela não acusa, "constata que anotou"); termina devolvendo a vez aos dois com tensão aberta, sem resolver; e atualiza o mundo persistente nas tags ao fim, invisíveis ao jogador.
+**Por que funciona:** abre com detalhe sensorial concreto (porta azeitada = alguém preparou isto); a Fome alta do Jogador A modula a prosa (a veia "alta demais"); a fala é puro subtext (ela não acusa, "constata que anotou"); termina devolvendo a vez aos dois com tensão aberta, sem resolver; e atualiza o mundo persistente nas tags ao fim, invisíveis ao jogador.
 
 ---
 
@@ -2427,10 +2380,6 @@ def index():
         bane=bane.get(session['jogador'], ''),
         resonance=resonance.get(session['jogador'], ''))
 
-
-@app.route('/rede.html')
-def teia_de_sangue():
-    return render_template('rede.html')
 
 
 @app.route('/rolar', methods=['POST'])
@@ -3731,9 +3680,13 @@ def criar_wav_header_streaming(rate=24000, bits=16, channels=1):
 def _tts_gerar_gemini_stream(texto: str, hash_str: str):
     import json as _json, base64 as _b64, io as _io, wave as _wave
     import urllib.request as _ur
-    chave = os.environ.get('GEMINI_TTS_API_KEY') or os.environ.get('GOOGLE_API_KEY', '')
-    if not chave: raise ValueError("Sem API KEY")
-    
+    import google.auth, google.auth.transport.requests as _gtr
+    _creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+    _creds.refresh(_gtr.Request())
+    chave = _creds.token
+    GCP_PROJECT_TTS  = "agenda-auto-498817"
+    GCP_LOCATION_TTS = "us-central1"
+
     # Divide textos muito grandes (Gemini corta após ~1.4k a 1.5k caracteres)
     import re as _re
     frases = _re.split(r'(?<=[.!?]) +', texto)
@@ -3748,25 +3701,31 @@ def _tts_gerar_gemini_stream(texto: str, hash_str: str):
     if curr: pedacos.append(curr.strip())
     if not pedacos: pedacos = [texto]
 
+    def _fazer_req(pedaco, i):
+        url = f'https://{GCP_LOCATION_TTS}-aiplatform.googleapis.com/v1/projects/{GCP_PROJECT_TTS}/locations/{GCP_LOCATION_TTS}/publishers/google/models/{GEMINI_TTS_MODEL}:streamGenerateContent?alt=sse'
+        texto_enviar = (GEMINI_TTS_STYLE + "\n\n" + pedaco) if i == 0 else pedaco
+        body = _json.dumps({
+            "contents": [{"parts": [{"text": texto_enviar}]}],
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+                "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": GEMINI_TTS_VOICE}}},
+            },
+        }).encode('utf-8')
+        req = _ur.Request(url, data=body, headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {chave}'})
+        return _ur.urlopen(req, timeout=15)
+
+    # Conecta eagerly no primeiro pedaço — se o Gemini estiver fora, levanta aqui
+    # antes de retornar o generator, permitindo que tts_audio caia pro edge-tts.
+    primeiro_resp = _fazer_req(pedacos[0], 0)
+
     def _gen():
         yield criar_wav_header_streaming()
         pcm_chunks = []
         sucesso_completo = False
         try:
             for i, pedaco in enumerate(pedacos):
-                url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TTS_MODEL}:streamGenerateContent?alt=sse&key={chave}'
-                texto_enviar = (GEMINI_TTS_STYLE + "\n\n" + pedaco) if i == 0 else pedaco
-                body = _json.dumps({
-                    "contents": [{"parts": [{"text": texto_enviar}]}],
-                    "generationConfig": {
-                        "responseModalities": ["AUDIO"],
-                        "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": GEMINI_TTS_VOICE}}},
-                    },
-                }).encode('utf-8')
-                req = _ur.Request(url, data=body, headers={'Content-Type': 'application/json'})
-                
+                resp = primeiro_resp if i == 0 else _fazer_req(pedaco, i)
                 try:
-                    resp = _ur.urlopen(req, timeout=15)
                     for line in resp:
                         if line.startswith(b'data: '):
                             data_str = line[6:].decode('utf-8').strip()
@@ -3797,7 +3756,7 @@ def _tts_gerar_gemini_stream(texto: str, hash_str: str):
                 with _wave.open(buf, 'wb') as w:
                     w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(full_pcm)
                 wav_data = buf.getvalue()
-                
+
                 def _upload_bg():
                     url_r2 = _tts_r2_salvar(texto, wav_data)
                     with _tts_generating_cond:
@@ -3898,9 +3857,11 @@ def tts_audio(token):
                 
         try:
             if hash_str in _tts_generating:
-                wav = _tts_gerar_gemini_stream(texto, hash_str)
-                if wav:
-                    return Response(wav, mimetype='audio/wav', headers={'Cache-Control': 'no-store'})
+                return Response(
+                    _tts_gerar_gemini_stream(texto, hash_str),
+                    mimetype='audio/wav',
+                    headers={'Cache-Control': 'no-store'},
+                )
         except Exception as e:
             app.logger.warning("Falha ao iniciar Gemini stream (%s) - caindo pro edge-tts", str(e)[:140])
             with _tts_generating_cond:
