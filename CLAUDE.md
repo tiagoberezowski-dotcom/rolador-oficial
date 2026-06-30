@@ -1,6 +1,6 @@
 # Rolador Oficial — contexto do projeto
 
-App Flask de RPG colaborativo (Vampire: the Masquerade 5e), crônica "Varsóvia".
+App Flask de RPG colaborativo (Vampire: the Masquerade 5e).
 Backend em `app.py` (Flask + gunicorn), banco SQLite, templates em `templates/`.
 Inclui rolador de dados, chat, narrador TTS e um "Mestre IA".
 

@@ -1300,6 +1300,37 @@ def _obter_briefing(timeout=3.0):
         return None
 
 
+RAG_WORKER_URL = os.environ.get('RAG_WORKER_URL', 'https://vtm-rules.tiagoberezowski.workers.dev/query')
+RAG_MIN_SCORE = 0.35
+RAG_TOP_K = 3
+
+
+def _consultar_rag(texto: str) -> str | None:
+    """Consulta o Vectorize com a ação do jogador e retorna trechos de regras relevantes."""
+    try:
+        r = requests.post(
+            RAG_WORKER_URL,
+            json={"q": texto, "top_k": RAG_TOP_K},
+            timeout=4,
+        )
+        r.raise_for_status()
+        chunks = r.json().get("chunks", [])
+        relevantes = [c for c in chunks if c.get("score", 0) >= RAG_MIN_SCORE]
+        if not relevantes:
+            return None
+        linhas = ["[REGRAS VTM — CONSULTA AUTOMÁTICA]"]
+        for c in relevantes:
+            secao = c.get("section", "")
+            pagina = c.get("page")
+            trecho = c.get("text", "").strip()
+            cabecalho = f"Seção: {secao}" + (f" (pág. {pagina})" if pagina else "")
+            linhas.append(f"{cabecalho}\n{trecho}")
+        return "\n\n".join(linhas)
+    except Exception as exc:
+        app.logger.warning("RAG: falha na consulta (%s)", str(exc)[:120])
+        return None
+
+
 def gerar_resposta_ia(acoes, stream=False, briefing=None, continuacao=None):
     """
     Liga para a API da DeepSeek e pede para ela narrar o turno.
@@ -1872,6 +1903,13 @@ Cidades-exemplo a oferecer (não use como lista mecânica — integre na prosa):
             "role": "assistant",
             "content": "Análise recebida. Incorporo esses elementos na narração."
         })
+
+    # RAG — trechos do livro de regras VTM 5e relevantes para a ação atual.
+    acao_texto_rag = ' '.join(a['texto'] for a in acoes)
+    regras_rag = _consultar_rag(acao_texto_rag)
+    if regras_rag:
+        mensagens_api.append({"role": "user", "content": regras_rag})
+        mensagens_api.append({"role": "assistant", "content": "Regras consultadas. Aplico na narração."})
 
     # Empacota as ações — pode ser 1 ou 2 jogadores
     if len(acoes) == 1:
