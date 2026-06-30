@@ -1242,10 +1242,11 @@ ESTADO DO MUNDO (relevante):
 {ultimas_txt}
 
 ---
-Responda EXATAMENTE neste formato (omita ALERTA se não houver):
+Responda EXATAMENTE neste formato (omita ALERTA se não houver; omita ROLAR_NPC se for "sem rolagem" ou se só o jogador rola):
 
 TIPO: [social_ativo | social_resistido | combate | furtividade | investigação | disciplina | narrativo]
 MECÂNICA: [pool = Atributo + Perícia; se resistido, indique a oposição; se usar Disciplina, inclua o teste de Rouse (1 dado) e a oposição quando houver; se narrativo puro, escreva "sem rolagem"]
+ROLAR_NPC: [SOMENTE em ações resistidas com NPC: preencha a tag pronta → [ROLAR: NomeNPC | dados_normais | dados_fome | Pool NPC vs Jogador]. Omita se não houver oposição de NPC.]
 ALERTA: [INCLUA SOMENTE se a ação afirma um resultado como já obtido (ex.: "convenço X", "arrombo a porta", "faço-o recuar"): avise o Narrador a pedir a rolagem antes. Se for só tentativa ("tento", "ataco", "me esgueiro"), NÃO escreva esta linha.]
 CONTEXTO: [1-3 itens do estado do mundo diretamente relevantes para esta ação]"""
 
@@ -1257,7 +1258,7 @@ CONTEXTO: [1-3 itens do estado do mundo diretamente relevantes para esta ação]
                     {"role": "system", "content": prompt_sistema},
                     {"role": "user", "content": prompt_usuario},
                 ],
-                max_tokens=220,
+                max_tokens=280,
                 temperature=0.1,
                 timeout=8,
             )
@@ -1514,6 +1515,7 @@ Aplique as regras como tensão narrativa, jamais como planilha.
   - O sistema executa os dados reais via RNG do servidor e determina o vencedor automaticamente.
   - **Não invente resultados.** Narre até o instante da rolagem, emita a(s) tag(s) no FIM da resposta e pare. O servidor rola na hora e devolve os resultados imediatamente para você **continuar a narração no mesmo turno** — incorpore o desfecho sem repetir o que já narrou.
   - Use também para rolagens puras de NPC sem oponente: `[ROLAR: Guarda | 3 | 0 | Percepção]`
+  - **Atalho:** quando a análise prévia da cena contiver uma linha `ROLAR_NPC:`, ela já traz a tag formatada — use-a diretamente, sem inventar o resultado antes.
 
 **Rolagens verificadas dos jogadores:** as rolagens feitas no rolador do site chegam a você num bloco `[ROLAGENS DOS JOGADORES]` com os dados reais do RNG do servidor. Esses números são a verdade mecânica — se a mensagem do jogador citar valores diferentes, confie no bloco verificado. O jogador não precisa transcrever resultados: declare a reserva, espere a rolagem e narre a partir do bloco.
 
@@ -1938,9 +1940,15 @@ Cidades-exemplo a oferecer (não use como lista mecânica — integre na prosa):
             "role": "user",
             "content": f"[ANÁLISE PRÉVIA DA CENA — sistema automático]\n{briefing}"
         })
+        _ack_briefing = "Análise recebida. Incorporo esses elementos na narração."
+        if "ROLAR_NPC:" in briefing:
+            import re as _re
+            _match = _re.search(r'ROLAR_NPC:\s*(\[ROLAR:[^\]]+\])', briefing)
+            if _match:
+                _ack_briefing += f" A tag de rolagem do NPC já está pronta: {_match.group(1)} — emito-a ao chegar nesse momento, sem inventar o resultado antes."
         mensagens_api.append({
             "role": "assistant",
-            "content": "Análise recebida. Incorporo esses elementos na narração."
+            "content": _ack_briefing
         })
 
     # RAG — trechos do livro de regras VTM 5e relevantes para a ação atual.
