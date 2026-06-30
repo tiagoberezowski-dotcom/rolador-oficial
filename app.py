@@ -2837,14 +2837,25 @@ def iniciar_sessao():
 
     canon_atual = obter_canon()
     is_novo_arco = canon_atual.startswith('[NOVO_ARCO]')
+    cidade_definida = is_novo_arco and '=== CENÁRIO' in canon_atual
 
-    if is_novo_arco:
+    if is_novo_arco and not cidade_definida:
         trigger_texto = (
             "[OOC — Sistema] Este é o início de um novo arco. "
             "Siga o protocolo da Seção XV do system prompt: "
             "apresente 2 a 3 cidades com sabor e tensão VTM 5E distintos, "
             "em prosa concisa, e convide os jogadores a escolherem onde a noite começa. "
             "Não abra cena ainda. Não invente história anterior. Termine com uma pergunta aberta sobre a escolha da cidade."
+        )
+    elif is_novo_arco and cidade_definida:
+        trigger_texto = (
+            "[OOC — Sistema] Início de novo arco, mas a cidade e a corte já estão "
+            "definidas no cânone (Seção XV.C do system prompt) — não pergunte sobre "
+            "cidade, isso já foi decidido. Plante a tensão inicial, abra a cena "
+            "in media res com Lior e Fryderyk dentro dela (sem prólogo, sem contexto "
+            "expositivo) e crie o primeiro relógio com [RELOGIO: nome | x/y]. "
+            "Termine com 'O que vocês fazem?' ou direcionando individualmente para "
+            "cada jogador presente."
         )
     else:
         trigger_texto = (
